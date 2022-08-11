@@ -81,12 +81,29 @@ kalloc(void)
   return (void*)r;
 }
 
-int
-freemem_size(void){
+
+// Return the number of bytes of free memory
+uint64
+free_mem(void)
+{
   struct run *r;
-  int num =0;
-  for (r=kmem.freelist;r;r=r->next){
+  // counting the number of free page
+  uint64 num = 0;
+  // add lock
+  acquire(&kmem.lock);
+  // r points to freelist
+  r = kmem.freelist;
+  // while r not null
+  while (r)
+  {
+    // the num add one
     num++;
+    // r points to the next
+    r = r->next;
   }
-  return num*PGSIZE;
+  // release lock
+  release(&kmem.lock);
+  // page multiplicated 4096-byte page
+  return num * PGSIZE;
 }
+

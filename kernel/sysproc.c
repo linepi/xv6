@@ -98,34 +98,36 @@ sys_uptime(void)
 }
 
 uint64
-sys_trace(void){
-  int n;
-  if(argint(0,&n)<0)
+sys_trace(void)
+{
+  int mask;
+  // 取 a0 寄存器中的值返回给 mask
+  if(argint(0, &mask) < 0)
     return -1;
-  struct proc *p=myproc();
-  char *mask = p->mask;
-  int i=0;
-  while (i< MASK_SIZE && n>0){
-    if(n%2){
-      mask[i++]='1';
-    }else{
-      mask[i++]='0';
-    }
-    n>>=1;
-  }
+  
+  // 把 mask 传给现有进程的 mask
+  myproc()->mask = mask;
   return 0;
 }
 
+
 uint64
-sys_sysinfo(void){
-  struct sysinfo info;
+sys_sysinfo(void)
+{
+  // addr is a user virtual address, pointing to a struct sysinfo
   uint64 addr;
-  struct proc *p=myproc();
-  if(argaddr(0,&addr)<0)
+  struct sysinfo info;
+  struct proc *p = myproc();
+  
+  if (argaddr(0, &addr) < 0)
+	  return -1;
+  // get the number of bytes of free memory
+  info.freemem = free_mem();
+  // get the number of processes whose state is not UNUSED
+  info.nproc = nproc();
+
+  if (copyout(p->pagetable, addr, (char *)&info, sizeof(info)) < 0)
     return -1;
-  info.freemem = freemem_size();
-  info.nproc=proc_num();
-  if(copyout(p->pagetable,addr,(char *)&info,sizeof(info))<0)
-    return -1;
+  
   return 0;
 }

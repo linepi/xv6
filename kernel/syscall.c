@@ -134,11 +134,13 @@ static uint64 (*syscalls[])(void) = {
 [SYS_sysinfo] sys_sysinfo,
 };
 
-static char *syscall_names[24] = {"","fork","exit","wait","pipe","read",
-                                  "kill","exec","fstst","chdir","dup",
-                                  "getpid","sbrk","sleep","uptime","open",
-                                  "write","mknod","unlink","link","mkdir",
-                                  "close","trace","sysinfo"};
+static char *syscall_names[] = {
+  "", "fork", "exit", "wait", "pipe", 
+  "read", "kill", "exec", "fstat", "chdir", 
+  "dup", "getpid", "sbrk", "sleep", "uptime", 
+  "open", "write", "mknod", "unlink", "link", 
+  "mkdir", "close", "trace","sysinfo"};
+
 
 void
 syscall(void)
@@ -149,9 +151,9 @@ syscall(void)
   num = p->trapframe->a7;
   if(num > 0 && num < NELEM(syscalls) && syscalls[num]) {
     p->trapframe->a0 = syscalls[num]();
-    if(strlen(p->mask)>0&&p->mask[num]=='1'){
-      printf("%d:syscall %s -> %d\n",
-        p->pid, syscall_names[num],p->trapframe->a0);
+    // 下面是添加的部分
+    if((1 << num) & p->mask) {
+      printf("%d: syscall %s -> %d\n", p->pid, syscall_names[num], p->trapframe->a0);
     }
   } else {
     printf("%d %s: unknown sys call %d\n",
