@@ -39,6 +39,7 @@ struct {
   // head.next is most recent, head.prev is least.
 //  struct buf head;    // lab8-2
 } bcache;
+
 void
 binit(void)
 {
@@ -171,6 +172,7 @@ bget(uint dev, uint blockno)
 }
 
 
+
 // Return a locked buf with the contents of the indicated block.
 struct buf*
 bread(uint dev, uint blockno)
@@ -242,5 +244,4 @@ bunpin(struct buf *b) {
   b->refcnt--;
   release(&bcache.locks[idx]);
 }
-
 
