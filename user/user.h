@@ -40,3 +40,6 @@ void free(void*);
 int atoi(const char*);
 int memcmp(const void *, const void *, uint);
 void *memcpy(void *, const void *, uint);
+void *mmap(void *addr, int length, int prot, int flags,
+           int fd, int offset);     // lab10
+int munmap(void *add, int length);  // lab10
