@@ -1,1 +1,6 @@
-0
+entry.o kernel/kalloc.o kernel/string.o kernel/main.o kernel/vm.o k
+ernel/proc.o kernel/swtch.o kernel/trampoline.o kernel/trap.o kernel
+/syscall.o kernel/sysproc.o kernel/bio.o kernel/fs.o kernel/log.o ke
+rnel/sleeplock.o kernel/file.o kernel/pipe.o kernel/exec.o kernel/sys
+file.o kernel/kernelvec.o kernel/plic.o kernel/virtio_disk.o ker
+nel/start.o kernel/console.o kernel/printf.o kernel/uart.o kernel/spinlock.o
