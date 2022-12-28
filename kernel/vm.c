@@ -43,6 +43,7 @@ kvmmake(void)
   // the highest virtual address in the kernel.
   kvmmap(kpgtbl, TRAMPOLINE, (uint64)trampoline, PGSIZE, PTE_R | PTE_X);
 
+  // vmprint(kpgtbl, 1);
   // map kernel stacks
   proc_mapstacks(kpgtbl);
   
@@ -118,6 +119,24 @@ walkaddr(pagetable_t pagetable, uint64 va)
     return 0;
   pa = PTE2PA(*pte);
   return pa;
+}
+
+uint64
+va2pa(pagetable_t pgtbl, uint64 va)
+{
+  uint64 off = va % PGSIZE;
+  pte_t *pte;
+  uint64 pa;
+  if(va >= MAXVA)
+    return 0;
+
+  pte = walk(pgtbl, va, 0);
+  if(pte == 0)
+    panic("va2pa");
+  if((*pte & PTE_V) == 0)
+    panic("va2pa");
+  pa = PTE2PA(*pte);
+  return pa+off;
 }
 
 // add a mapping to the kernel page table.
@@ -431,4 +450,40 @@ copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
   } else {
     return -1;
   }
+}
+
+
+void
+vmprint_(pagetable_t pt, int level, uint64 va, int out, int *num){
+  uint64 va0 = va;
+  for(uint64 i = 0; i < PGSIZE/8; i++){
+    pte_t pte = pt[i];
+    va = va0;
+    if((pte & PTE_V) && (pte & (PTE_R|PTE_W|PTE_X)) == 0){
+      *num += 1;
+      va |= (i << (9*level + PGSHIFT));
+
+      pagetable_t tmp_pt = (pagetable_t)PTE2PA(pte);
+      for(int j = 0; j < 3 - level; j++){
+        if(out) printf(".. ");
+      }
+      if(out) printf("%d: pte %p -> pa %p\n", i, pte, tmp_pt, va);
+
+      vmprint_(tmp_pt, level - 1, va, out, num);
+    }else if(pte & PTE_V){
+      va |= (i << (9*level + PGSHIFT));
+      if(out) printf(".. .. ..%d: pte %p -> pa %p from va %p\n", i, pte, PTE2PA(pte), va);
+    }
+  }
+}
+
+void
+vmprint(pagetable_t pt, int out){
+  int num = 0;
+  printf("page table %p\n", pt);
+
+  vmprint_(pt, 2, 0, out, &num);
+  // get number of pages the pagetable use to store PTEs
+  if(num) num++;
+  printf("page table use %d pages in all\n", num);
 }
