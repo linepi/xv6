@@ -5,6 +5,8 @@ _*
 *.asm
 *.sym
 *.img
+build/
+.vscode/
 vectors.S
 bootblock
 entryother

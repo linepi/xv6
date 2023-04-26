@@ -1,54 +1,38 @@
+.SILENT:
 K=kernel
 U=user
-
-OBJS = \
-  $K/entry.o \
-  $K/start.o \
-  $K/console.o \
-  $K/printf.o \
-  $K/uart.o \
-  $K/kalloc.o \
-  $K/spinlock.o \
-  $K/string.o \
-  $K/main.o \
-  $K/vm.o \
-  $K/proc.o \
-  $K/swtch.o \
-  $K/trampoline.o \
-  $K/trap.o \
-  $K/syscall.o \
-  $K/sysproc.o \
-  $K/bio.o \
-  $K/fs.o \
-  $K/log.o \
-  $K/sleeplock.o \
-  $K/file.o \
-  $K/pipe.o \
-  $K/exec.o \
-  $K/sysfile.o \
-  $K/kernelvec.o \
-  $K/plic.o \
-  $K/virtio_disk.o
 
 # riscv64-unknown-elf- or riscv64-linux-gnu-
 # perhaps in /opt/riscv/bin
 #TOOLPREFIX = 
 
 # Try to infer the correct TOOLPREFIX if not set
-ifndef TOOLPREFIX
-TOOLPREFIX := $(shell if riscv64-unknown-elf-objdump -i 2>&1 | grep 'elf64-big' >/dev/null 2>&1; \
-	then echo 'riscv64-unknown-elf-'; \
-	elif riscv64-linux-gnu-objdump -i 2>&1 | grep 'elf64-big' >/dev/null 2>&1; \
-	then echo 'riscv64-linux-gnu-'; \
-	elif riscv64-unknown-linux-gnu-objdump -i 2>&1 | grep 'elf64-big' >/dev/null 2>&1; \
-	then echo 'riscv64-unknown-linux-gnu-'; \
-	else echo "***" 1>&2; \
-	echo "*** Error: Couldn't find a riscv64 version of GCC/binutils." 1>&2; \
-	echo "*** To turn off this error, run 'gmake TOOLPREFIX= ...'." 1>&2; \
-	echo "***" 1>&2; exit 1; fi)
-endif
+# ifndef TOOLPREFIX
+# TOOLPREFIX := $(shell if riscv64-unknown-elf-objdump -i 2>&1 | grep 'elf64-big' >/dev/null 2>&1; \
+# 	then echo 'riscv64-unknown-elf-'; \
+# 	elif riscv64-linux-gnu-objdump -i 2>&1 | grep 'elf64-big' >/dev/null 2>&1; \
+# 	then echo 'riscv64-linux-gnu-'; \
+# 	elif riscv64-unknown-linux-gnu-objdump -i 2>&1 | grep 'elf64-big' >/dev/null 2>&1; \
+# 	then echo 'riscv64-unknown-linux-gnu-'; \
+# 	else echo "***" 1>&2; \
+# 	echo "*** Error: Couldn't find a riscv64 version of GCC/binutils." 1>&2; \
+# 	echo "*** To turn off this error, run 'gmake TOOLPREFIX= ...'." 1>&2; \
+# 	echo "***" 1>&2; exit 1; fi)
+# endif
+
+TOOLPREFIX = riscv64-linux-gnu-
 
 QEMU = qemu-system-riscv64
+BUILD_DIR = build
+U_OBJ_DIR = $(BUILD_DIR)/$U
+K_OBJ_DIR = $(BUILD_DIR)/$K
+
+U_SRCS = $(filter-out $U/forktest.c $(shell find $U/lib -name "*"), $(shell find $U -name "*.[c]"))
+U_LIB_OBJS = $(patsubst %.c, $(BUILD_DIR)/%.o, $(shell find $U/lib -name "*.[c]")) $(U_OBJ_DIR)/usys.o
+U_SRC_OBJS = $(patsubst %.c, $(BUILD_DIR)/%.o, $(U_SRCS))
+U_PROGS = $(addprefix $(U_OBJ_DIR)/_, $(basename $(notdir $(U_SRCS))))
+
+K_OBJS = $(patsubst %.c, $(BUILD_DIR)/%.o, $(patsubst %.S, $(BUILD_DIR)/%.o, $(shell find $K -name "*.[cS]")))
 
 CC = $(TOOLPREFIX)gcc
 AS = $(TOOLPREFIX)gas
@@ -56,7 +40,7 @@ LD = $(TOOLPREFIX)ld
 OBJCOPY = $(TOOLPREFIX)objcopy
 OBJDUMP = $(TOOLPREFIX)objdump
 
-CFLAGS = -Wall -Werror -O -fno-omit-frame-pointer -ggdb
+CFLAGS = -Wall -O -fno-omit-frame-pointer -ggdb
 CFLAGS += -MD
 CFLAGS += -mcmodel=medany
 CFLAGS += -ffreestanding -fno-common -nostdlib -mno-relax
@@ -73,41 +57,59 @@ endif
 
 LDFLAGS = -z max-page-size=4096
 
-$K/kernel: $(OBJS) $K/kernel.ld $U/initcode
-	$(LD) $(LDFLAGS) -T $K/kernel.ld -o $K/kernel $(OBJS) 
-	$(OBJDUMP) -S $K/kernel > $K/kernel.asm
-	$(OBJDUMP) -t $K/kernel | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $K/kernel.sym
+$(K_OBJ_DIR)/kernel: $(K_OBJS) $K/kernel.ld $(U_OBJ_DIR)/initcode
+	@echo "+ LD $@"
+	@mkdir -p $(dir $@)
+	$(LD) $(LDFLAGS) -T $K/kernel.ld -o $(K_OBJ_DIR)/kernel $(K_OBJS) 
+	$(OBJDUMP) -S $(K_OBJ_DIR)/kernel > $(K_OBJ_DIR)/kernel.asm
+	$(OBJDUMP) -t $(K_OBJ_DIR)/kernel | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $(K_OBJ_DIR)/kernel.sym
 
-$U/initcode: $U/initcode.S
-	$(CC) $(CFLAGS) -march=rv64g -nostdinc -I. -Ikernel -c $U/initcode.S -o $U/initcode.o
-	$(LD) $(LDFLAGS) -N -e start -Ttext 0 -o $U/initcode.out $U/initcode.o
-	$(OBJCOPY) -S -O binary $U/initcode.out $U/initcode
-	$(OBJDUMP) -S $U/initcode.o > $U/initcode.asm
+$(U_OBJ_DIR)/initcode: $U/initcode.S
+	@echo "+ CC $@"
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -march=rv64g -nostdinc -I. -Ikernel -c $U/initcode.S -o $(U_OBJ_DIR)/initcode.o
+	@echo "+ LD $@"
+	$(LD) $(LDFLAGS) -N -e start -Ttext 0 -o $(U_OBJ_DIR)/initcode.out $(U_OBJ_DIR)/initcode.o
+	$(OBJCOPY) -S -O binary $(U_OBJ_DIR)/initcode.out $(U_OBJ_DIR)/initcode
+	$(OBJDUMP) -S $(U_OBJ_DIR)/initcode.o > $(U_OBJ_DIR)/initcode.asm
 
-tags: $(OBJS) _init
+tags: $(K_OBJS) _init
 	etags *.S *.c
 
-ULIB = $U/ulib.o $U/usys.o $U/printf.o $U/umalloc.o
+$(BUILD_DIR)/%.o: %.c
+	@echo "+ CC $@"
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -c -o $@ $<
 
-_%: %.o $(ULIB)
+$(BUILD_DIR)/%.o: %.S
+	@echo "+ CC $@"
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -c -o $@ $<
+
+_%: %.o $(U_LIB_OBJS)
+	@echo "+ LD $@"
+	@mkdir -p $(dir $@)
 	$(LD) $(LDFLAGS) -N -e main -Ttext 0 -o $@ $^
 	$(OBJDUMP) -S $@ > $*.asm
 	$(OBJDUMP) -t $@ | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $*.sym
 
-$U/usys.S : $U/usys.pl
-	perl $U/usys.pl > $U/usys.S
+$U/usys.S : $U/lib/usys.pl
+	perl $U/lib/usys.pl > $U/usys.S
 
-$U/usys.o : $U/usys.S
-	$(CC) $(CFLAGS) -c -o $U/usys.o $U/usys.S
+$(U_OBJ_DIR)/usys.o: $U/usys.S
+	@mkdir -p $(dir $@)
+	$(CC) $(CFLAGS) -c -o $@ $<
 
-$U/_forktest: $U/forktest.o $(ULIB)
+$U/_forktest: $U/forktest.o $(U_LIB_OBJS)
 	# forktest has less library code linked in - needs to be small
 	# in order to be able to max out the proc table.
+	@echo "+ LD $@"
 	$(LD) $(LDFLAGS) -N -e main -Ttext 0 -o $U/_forktest $U/forktest.o $U/ulib.o $U/usys.o
 	$(OBJDUMP) -S $U/_forktest > $U/forktest.asm
 
 mkfs/mkfs: mkfs/mkfs.c $K/fs.h $K/param.h
-	gcc -Werror -Wall -I. -o mkfs/mkfs mkfs/mkfs.c
+	@echo "+ CC $@"
+	gcc -Werror -Wall -I. -g -o mkfs/mkfs mkfs/mkfs.c
 
 # Prevent deletion of intermediate files, e.g. cat.o, after first build, so
 # that disk image changes after first build are persistent until clean.  More
@@ -115,36 +117,17 @@ mkfs/mkfs: mkfs/mkfs.c $K/fs.h $K/param.h
 # http://www.gnu.org/software/make/manual/html_node/Chained-Rules.html
 .PRECIOUS: %.o
 
-UPROGS=\
-	$U/_cat\
-	$U/_echo\
-	$U/_forktest\
-	$U/_grep\
-	$U/_init\
-	$U/_kill\
-	$U/_ln\
-	$U/_ls\
-	$U/_mkdir\
-	$U/_rm\
-	$U/_sh\
-	$U/_stressfs\
-	$U/_usertests\
-	$U/_grind\
-	$U/_wc\
-	$U/_zombie\
+fs.img: mkfs/mkfs README $(U_PROGS)
+	@echo "+ fs.img"
+	mkfs/mkfs fs.img README $(U_PROGS)
 
-fs.img: mkfs/mkfs README $(UPROGS)
-	mkfs/mkfs fs.img README $(UPROGS)
-
--include kernel/*.d user/*.d
+-include $(K_OBJ_DIR)/*.d $(U_OBJ_DIR)/*.d
 
 clean: 
-	rm -f *.tex *.dvi *.idx *.aux *.log *.ind *.ilg \
-	*/*.o */*.d */*.asm */*.sym \
-	$U/initcode $U/initcode.out $K/kernel fs.img \
-	mkfs/mkfs .gdbinit \
-        $U/usys.S \
-	$(UPROGS)
+	rm -rf *.tex *.dvi *.idx *.aux *.log *.ind *.ilg */*.sym \
+	*/*.d */*.o */usys.S \
+	fs.img mkfs/mkfs .gdbinit \
+    $U/usys.S build
 
 # try to generate a unique GDB port
 GDBPORT = $(shell expr `id -u` % 5000 + 25000)
@@ -156,17 +139,17 @@ ifndef CPUS
 CPUS := 3
 endif
 
-QEMUOPTS = -machine virt -bios none -kernel $K/kernel -m 128M -smp $(CPUS) -nographic
+QEMUOPTS = -machine virt -bios none -kernel $(K_OBJ_DIR)/kernel -m 128M -smp $(CPUS) -nographic
 QEMUOPTS += -drive file=fs.img,if=none,format=raw,id=x0
 QEMUOPTS += -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0
 
-qemu: $K/kernel fs.img
+qemu: $(K_OBJ_DIR)/kernel fs.img
 	$(QEMU) $(QEMUOPTS)
 
 .gdbinit: .gdbinit.tmpl-riscv
 	sed "s/:1234/:$(GDBPORT)/" < $^ > $@
 
-qemu-gdb: $K/kernel .gdbinit fs.img
+qemu-gdb: $(K_OBJ_DIR)/kernel .gdbinit fs.img
 	@echo "*** Now run 'gdb' in another window." 1>&2
 	$(QEMU) $(QEMUOPTS) -S $(QEMUGDB)
 
