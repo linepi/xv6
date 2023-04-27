@@ -1,10 +1,10 @@
-#include "types.h"
-#include "param.h"
-#include "memlayout.h"
-#include "riscv.h"
-#include "spinlock.h"
-#include "proc.h"
-#include "defs.h"
+#include "kernel/types.h"
+#include "kernel/param.h"
+#include "kernel/memlayout.h"
+#include "kernel/riscv.h"
+#include "kernel/spinlock.h"
+#include "kernel/proc.h"
+#include "kernel/defs.h"
 
 struct cpu cpus[NCPU];
 

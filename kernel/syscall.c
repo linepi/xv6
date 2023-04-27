@@ -1,11 +1,11 @@
-#include "types.h"
-#include "param.h"
-#include "memlayout.h"
-#include "riscv.h"
-#include "spinlock.h"
-#include "proc.h"
-#include "syscall.h"
-#include "defs.h"
+#include "kernel/types.h"
+#include "kernel/param.h"
+#include "kernel/memlayout.h"
+#include "kernel/riscv.h"
+#include "kernel/spinlock.h"
+#include "kernel/proc.h"
+#include "kernel/syscall.h"
+#include "kernel/defs.h"
 
 // Fetch the uint64 at addr from the current process.
 int

@@ -1,4 +1,4 @@
-# .SILENT:
+.SILENT:
 K=kernel
 U=user
 
@@ -40,11 +40,11 @@ LD = $(TOOLPREFIX)ld
 OBJCOPY = $(TOOLPREFIX)objcopy
 OBJDUMP = $(TOOLPREFIX)objdump
 
-CFLAGS = -Wall -O -fno-omit-frame-pointer -ggdb
-CFLAGS += -MD
+CFLAGS = -Wall -Werror -O -fno-omit-frame-pointer -ggdb
+CFLAGS += -MD 
 CFLAGS += -mcmodel=medany
 CFLAGS += -ffreestanding -fno-common -nostdlib -mno-relax
-CFLAGS += -I.
+CFLAGS += -I$(XV6_HOME)/include
 CFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
 
 # Disable PIE when possible (for Ubuntu 16.10 toolchain)
@@ -60,7 +60,7 @@ LDFLAGS = -z max-page-size=4096
 $(K_OBJ_DIR)/kernel: $(K_OBJS) $K/kernel.ld $(U_OBJ_DIR)/initcode
 	@echo "+ LD $@"
 	@mkdir -p $(dir $@)
-	$(LD) $(LDFLAGS) -T $K/kernel.ld -o $(K_OBJ_DIR)/kernel $(K_OBJS) 
+	$(LD) $(LDFLAGS) -T $K/kernel.ld -o $(K_OBJ_DIR)/kernel $(K_OBJ_DIR)/entry.o $(filter-out $(K_OBJ_DIR)/entry.o,$(K_OBJS)) 
 	$(OBJDUMP) -S $(K_OBJ_DIR)/kernel > $(K_OBJ_DIR)/kernel.asm
 	$(OBJDUMP) -t $(K_OBJ_DIR)/kernel | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $(K_OBJ_DIR)/kernel.sym
 
@@ -82,9 +82,9 @@ $(BUILD_DIR)/%.o: %.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 $(BUILD_DIR)/%.o: %.S
-	@echo "+ CC $@"
+	@echo "+ AS $@"
 	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) -c -o $@ $<
+	$(CC) -c -o $@ $<
 
 _%: %.o $(U_LIB_OBJS)
 	@echo "+ LD $@"
@@ -107,9 +107,9 @@ $U/_forktest: $U/forktest.o $(U_LIB_OBJS)
 	$(LD) $(LDFLAGS) -N -e main -Ttext 0 -o $U/_forktest $U/forktest.o $U/ulib.o $U/usys.o
 	$(OBJDUMP) -S $U/_forktest > $U/forktest.asm
 
-mkfs/mkfs: mkfs/mkfs.c $K/fs.h $K/param.h
+mkfs/mkfs: mkfs/mkfs.c include/kernel/fs.h include/kernel/param.h
 	@echo "+ CC $@"
-	gcc -Werror -Wall -I. -g -o mkfs/mkfs mkfs/mkfs.c
+	gcc -Werror -Wall -Iinclude -o mkfs/mkfs mkfs/mkfs.c --verbose
 
 # Prevent deletion of intermediate files, e.g. cat.o, after first build, so
 # that disk image changes after first build are persistent until clean.  More
@@ -124,10 +124,9 @@ fs.img: mkfs/mkfs README $(U_PROGS)
 -include $(K_OBJ_DIR)/*.d $(U_OBJ_DIR)/*.d
 
 clean: 
-	rm -rf *.tex *.dvi *.idx *.aux *.log *.ind *.ilg */*.sym \
-	*/*.d */*.o */usys.S \
-	fs.img mkfs/mkfs .gdbinit \
-    $U/usys.S build
+	rm -rf \
+	$U/usys.S \
+	mkfs/mkfs .gdbinit build \
 
 # try to generate a unique GDB port
 GDBPORT = $(shell expr `id -u` % 5000 + 25000)
@@ -150,6 +149,8 @@ qemu: $(K_OBJ_DIR)/kernel fs.img
 	sed "s/:1234/:$(GDBPORT)/" < $^ > $@
 
 qemu-gdb: $(K_OBJ_DIR)/kernel .gdbinit fs.img
-	@echo "*** Now run 'gdb' in another window." 1>&2
+	@echo "Now run 'gdb' in another window." 1>&2
 	$(QEMU) $(QEMUOPTS) -S $(QEMUGDB)
 
+gdb: 
+	riscv64-unknown-linux-gnu-gdb

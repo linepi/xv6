@@ -9,17 +9,17 @@
 // routines.  The (higher-level) system call implementations
 // are in sysfile.c.
 
-#include "types.h"
-#include "riscv.h"
-#include "defs.h"
-#include "param.h"
-#include "stat.h"
-#include "spinlock.h"
-#include "proc.h"
-#include "sleeplock.h"
-#include "fs.h"
-#include "buf.h"
-#include "file.h"
+#include "kernel/types.h"
+#include "kernel/riscv.h"
+#include "kernel/defs.h"
+#include "kernel/param.h"
+#include "kernel/stat.h"
+#include "kernel/spinlock.h"
+#include "kernel/proc.h"
+#include "kernel/sleeplock.h"
+#include "kernel/fs.h"
+#include "kernel/buf.h"
+#include "kernel/file.h"
 
 #define min(a, b) ((a) < (b) ? (a) : (b))
 // there should be one superblock per disk device, but we run with
@@ -593,8 +593,8 @@ dirlink(struct inode *dp, char *name, uint inum)
 // Examples:
 //   skipelem("a/bb/c", name) = "bb/c", setting name = "a"
 //   skipelem("///a//bb", name) = "bb", setting name = "a"
-//   skipelem("a", name) = "", setting name = "a"
-//   skipelem("", name) = skipelem("////", name) = 0
+//   skipelem("a", name) = ", setting name = "a"
+//   skipelem(", name) = skipelem("////", name) = 0
 //
 static char*
 skipelem(char *path, char *name)

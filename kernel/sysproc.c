@@ -1,11 +1,11 @@
-#include "types.h"
-#include "riscv.h"
-#include "defs.h"
-#include "date.h"
-#include "param.h"
-#include "memlayout.h"
-#include "spinlock.h"
-#include "proc.h"
+#include "kernel/types.h"
+#include "kernel/riscv.h"
+#include "kernel/defs.h"
+#include "kernel/date.h"
+#include "kernel/param.h"
+#include "kernel/memlayout.h"
+#include "kernel/spinlock.h"
+#include "kernel/proc.h"
 
 uint64
 sys_exit(void)
