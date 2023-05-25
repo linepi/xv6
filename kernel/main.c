@@ -3,6 +3,7 @@
 #include "kernel/memlayout.h"
 #include "kernel/riscv.h"
 #include "kernel/defs.h"
+#include "common/color.h"
 
 volatile static int started = 0;
 
@@ -13,9 +14,7 @@ main()
   if(cpuid() == 0){
     consoleinit();
     printfinit();
-    printf("\n");
-    printf("xv6 kernel is booting\n");
-    printf("\n");
+    printf(ANSI_FMT("xv6 kernel is booting\n", ANSI_FG_CYAN));
     kinit();         // physical page allocator
     kvminit();       // create kernel page table
     kvminithart();   // turn on paging
