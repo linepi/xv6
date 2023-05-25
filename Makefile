@@ -2,7 +2,8 @@
 K=kernel
 U=user
 
-TOOLPREFIX = riscv64-linux-gnu-
+TOOLPREFIX = riscv64-unknown-elf-
+FS_IMG = build/fs.img
 
 QEMU = qemu-system-riscv64
 BUILD_DIR = build
@@ -23,7 +24,7 @@ OBJCOPY = $(TOOLPREFIX)objcopy
 OBJDUMP = $(TOOLPREFIX)objdump
 
 CFLAGS = -Wall -Werror -O -fno-omit-frame-pointer -ggdb3
-CFLAGS += -MD 
+CFLAGS += -MD -Wno-infinite-recursion
 CFLAGS += -mcmodel=medany
 CFLAGS += -ffreestanding -fno-common -nostdlib -mno-relax
 CFLAGS += -I$(XV6_HOME)/include
@@ -37,7 +38,7 @@ ifneq ($(shell $(CC) -dumpspecs 2>/dev/null | grep -e '[^f]nopie'),)
 CFLAGS += -fno-pie -nopie
 endif
 
-LDFLAGS = -z max-page-size=4096
+LDFLAGS = -z max-page-size=4096 --no-warn-rwx-segments 
 
 $(K_OBJ_DIR)/kernel: $(K_OBJS) $K/kernel.ld $(U_OBJ_DIR)/initcode
 	@echo "$(ANSI_FG_CYAN)+ LD $(ANSI_NONE)$@"
@@ -54,9 +55,6 @@ $(U_OBJ_DIR)/initcode: $U/initcode.S
 	$(LD) $(LDFLAGS) -N -e start -Ttext 0 -o $(U_OBJ_DIR)/initcode.out $(U_OBJ_DIR)/initcode.o
 	$(OBJCOPY) -S -O binary $(U_OBJ_DIR)/initcode.out $(U_OBJ_DIR)/initcode
 	$(OBJDUMP) -S $(U_OBJ_DIR)/initcode.o > $(U_OBJ_DIR)/initcode.asm
-
-tags: $(K_OBJS) _init
-	etags *.S *.c
 
 $(BUILD_DIR)/%.o: %.c
 	@echo "$(ANSI_FG_GREEN)+ CC $(ANSI_NONE)$@"
@@ -90,24 +88,15 @@ $U/_forktest: $U/forktest.o $(U_LIB_OBJS)
 	$(LD) $(LDFLAGS) -N -e main -Ttext 0 -o $U/_forktest $U/forktest.o $U/ulib.o $U/usys.o
 	$(OBJDUMP) -S $U/_forktest > $U/forktest.asm
 
-mkfs/mkfs: mkfs/mkfs.c include/kernel/fs.h include/kernel/param.h
+build/mkfs: mkfs/mkfs.c include/kernel/fs.h include/kernel/param.h
 	@echo "$(ANSI_FG_GREEN)+ CC $(ANSI_NONE)$@"
-	gcc -Werror -Wall -Iinclude -o mkfs/mkfs mkfs/mkfs.c
+	gcc -Werror -Wall -Iinclude -o $@ mkfs/mkfs.c
 
-# Prevent deletion of intermediate files, e.g. cat.o, after first build, so
-# that disk image changes after first build are persistent until clean.  More
-# details:
-# http://www.gnu.org/software/make/manual/html_node/Chained-Rules.html
-.PRECIOUS: %.o
-
-fs.img: mkfs/mkfs README $(U_PROGS)
-	@echo "$(ANSI_FG_GREEN)+ fs.img $(ANSI_NONE)"
-	mkfs/mkfs fs.img README $(U_PROGS)
+$(FS_IMG): build/mkfs README $(U_PROGS)
+	@echo "$(ANSI_FG_GREEN)+ $@ $(ANSI_NONE)"
+	build/mkfs $@ README $(U_PROGS)
 
 -include $(K_OBJ_DIR)/*.d $(U_OBJ_DIR)/*.d
-
-clean: 
-	rm -rf $U/usys.S mkfs/mkfs build
 
 # try to generate a unique GDB port
 GDBPORT = $(shell expr `id -u` % 5000 + 25000)
@@ -120,10 +109,10 @@ CPUS := 3
 endif
 
 QEMUOPTS = -machine virt -bios none -kernel $(K_OBJ_DIR)/kernel -m 128M -smp $(CPUS) -nographic
-QEMUOPTS += -drive file=fs.img,if=none,format=raw,id=x0
+QEMUOPTS += -drive file=build/fs.img,if=none,format=raw,id=x0
 QEMUOPTS += -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0
 
-qemu: $(K_OBJ_DIR)/kernel fs.img
+qemu: $(K_OBJ_DIR)/kernel $(FS_IMG)
 	$(QEMU) $(QEMUOPTS)
 
 .gdbinit: .gdbinit.tmpl-riscv
@@ -136,20 +125,33 @@ qemu-gdb: $(K_OBJ_DIR)/kernel .gdbinit fs.img
 gdb: 
 	riscv64-unknown-linux-gnu-gdb
 
-ANSI_FG_BLACK   = \33[1;30m
-ANSI_FG_RED     = \33[1;31m
-ANSI_FG_GREEN   = \33[1;32m
-ANSI_FG_YELLOW  = \33[1;33m
-ANSI_FG_BLUE    = \33[1;34m
-ANSI_FG_MAGENTA = \33[1;35m
-ANSI_FG_CYAN    = \33[1;36m
-ANSI_FG_WHITE   = \33[1;37m
-ANSI_BG_BLACK   = \33[1;40m
-ANSI_BG_RED     = \33[1;41m
-ANSI_BG_GREEN   = \33[1;42m
-ANSI_BG_YELLOW  = \33[1;43m
-ANSI_BG_BLUE    = \33[1;44m
-ANSI_BG_MAGENTA = \33[1;35m
-ANSI_BG_CYAN    = \33[1;46m
-ANSI_BG_WHITE   = \33[1;47m
-ANSI_NONE       = \33[0m
+clean: 
+	rm -rf $U/usys.S mkfs/mkfs build
+
+tags: $(K_OBJS) _init
+	etags *.S *.c
+
+# Prevent deletion of intermediate files, e.g. cat.o, after first build, so
+# that disk image changes after first build are persistent until clean.  More
+# details:
+# http://www.gnu.org/software/make/manual/html_node/Chained-Rules.html
+.PRECIOUS: %.o
+
+
+ANSI_FG_BLACK   = \033[1;30m
+ANSI_FG_RED     = \033[1;31m
+ANSI_FG_GREEN   = \033[1;32m
+ANSI_FG_YELLOW  = \033[1;33m
+ANSI_FG_BLUE    = \033[1;34m
+ANSI_FG_MAGENTA = \033[1;35m
+ANSI_FG_CYAN    = \033[1;36m
+ANSI_FG_WHITE   = \033[1;37m
+ANSI_BG_BLACK   = \033[1;40m
+ANSI_BG_RED     = \033[1;41m
+ANSI_BG_GREEN   = \033[1;42m
+ANSI_BG_YELLOW  = \033[1;43m
+ANSI_BG_BLUE    = \033[1;44m
+ANSI_BG_MAGENTA = \033[1;35m
+ANSI_BG_CYAN    = \033[1;46m
+ANSI_BG_WHITE   = \033[1;47m
+ANSI_NONE       = \033[0m
