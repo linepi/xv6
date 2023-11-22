@@ -112,15 +112,9 @@ QEMUOPTS += -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0
 qemu: $(K_OBJ_DIR)/kernel $(FS_IMG)
 	$(QEMU) $(QEMUOPTS)
 
-.gdbinit: .gdbinit.tmpl-riscv
-	sed "s/:1234/:$(GDBPORT)/" < $^ > $@
-
-qemu-gdb: $(K_OBJ_DIR)/kernel .gdbinit $(FS_IMG)
+qemu-gdb: $(K_OBJ_DIR)/kernel $(FS_IMG)
 	@echo "Now run 'gdb' in another window." 1>&2
 	$(QEMU) $(QEMUOPTS) -S $(QEMUGDB)
-
-gdb: 
-	riscv64-unknown-linux-gnu-gdb
 
 clean: 
 	rm -rf $U/usys.S mkfs/mkfs build

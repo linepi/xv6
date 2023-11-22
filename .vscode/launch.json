@@ -1,0 +1,19 @@
+{
+	"version": "0.2.0",
+	"configurations": [
+			{
+					"name": "xv6",
+					"type": "cppdbg",
+					"request": "launch",
+					"program": "${workspaceFolder}/build/kernel/kernel", 
+					"args": [],
+					"stopAtEntry": false,
+					"cwd": "${workspaceFolder}",
+					"environment": [],
+					"externalConsole": false,
+					"MIMode": "gdb",
+					"miDebuggerPath": "riscv64-unknown-elf-gdb",
+					"launchCompleteCommand": "exec-continue"
+			}
+	]
+}
