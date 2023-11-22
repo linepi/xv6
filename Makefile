@@ -18,7 +18,7 @@ U_PROGS = $(addprefix $(U_OBJ_DIR)/_, $(basename $(notdir $(U_SRCS))))
 K_OBJS = $(patsubst %.c, $(BUILD_DIR)/%.o, $(patsubst %.S, $(BUILD_DIR)/%.o, $(shell find $K -name "*.[cS]")))
 
 CC = $(TOOLPREFIX)gcc
-AS = $(TOOLPREFIX)gas
+AS = $(TOOLPREFIX)gcc
 LD = $(TOOLPREFIX)ld
 OBJCOPY = $(TOOLPREFIX)objcopy
 OBJDUMP = $(TOOLPREFIX)objdump
@@ -73,9 +73,6 @@ _%: %.o $(U_LIB_OBJS)
 	$(OBJDUMP) -S $@ > $*.asm
 	$(OBJDUMP) -t $@ | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $*.sym
 
-$U/usys.S : $U/lib/usys.pl
-	perl $U/lib/usys.pl > $U/usys.S
-
 $(U_OBJ_DIR)/usys.o: $U/usys.S
 	@echo "$(ANSI_FG_GREEN)+ AS $(ANSI_NONE)$@"
 	@mkdir -p $(dir $@)
@@ -118,7 +115,7 @@ qemu: $(K_OBJ_DIR)/kernel $(FS_IMG)
 .gdbinit: .gdbinit.tmpl-riscv
 	sed "s/:1234/:$(GDBPORT)/" < $^ > $@
 
-qemu-gdb: $(K_OBJ_DIR)/kernel .gdbinit fs.img
+qemu-gdb: $(K_OBJ_DIR)/kernel .gdbinit $(FS_IMG)
 	@echo "Now run 'gdb' in another window." 1>&2
 	$(QEMU) $(QEMUOPTS) -S $(QEMUGDB)
 

@@ -13,7 +13,6 @@ entryother
 initcode
 initcode.out
 kernelmemfs
-mkfs
-user/usys.S
 .gdbinit
+.gdbinit.tmpl-riscv
 .DS_Store

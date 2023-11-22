@@ -1,6 +1,5 @@
 # Initial process that execs /init.
 # This code runs in user space.
-
 #include "kernel/syscall.h"
 
 # exec(init, argv)
