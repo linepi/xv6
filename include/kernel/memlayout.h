@@ -65,3 +65,9 @@
 //   TRAPFRAME (p->trapframe, used by the trampoline)
 //   TRAMPOLINE (the same page as in the kernel)
 #define TRAPFRAME (TRAMPOLINE - PGSIZE)
+
+// to speed up some user syscall
+#define USYSCALL (TRAPFRAME - PGSIZE)
+struct usyscall {
+  int pid;  // Process ID
+};
