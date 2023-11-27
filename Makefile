@@ -23,7 +23,7 @@ LD = $(TOOLPREFIX)ld
 OBJCOPY = $(TOOLPREFIX)objcopy
 OBJDUMP = $(TOOLPREFIX)objdump
 
-CFLAGS = -Wall -Werror -O -fno-omit-frame-pointer -ggdb3
+CFLAGS = -Wall -Werror -O0 -fno-omit-frame-pointer -ggdb3
 CFLAGS += -MD -Wno-infinite-recursion
 CFLAGS += -mcmodel=medany
 CFLAGS += -ffreestanding -fno-common -nostdlib -mno-relax
@@ -69,7 +69,7 @@ $(BUILD_DIR)/%.o: %.S
 _%: %.o $(U_LIB_OBJS)
 	@echo "$(ANSI_FG_GREEN)+ LD $(ANSI_NONE)$@"
 	@mkdir -p $(dir $@)
-	$(LD) $(LDFLAGS) -N -e main -Ttext 0 -o $@ $^
+	$(LD) $(LDFLAGS) -N -e main -o $@ $^
 	$(OBJDUMP) -S $@ > $*.asm
 	$(OBJDUMP) -t $@ | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $*.sym
 
@@ -82,7 +82,7 @@ $U/_forktest: $U/forktest.o $(U_LIB_OBJS)
 	# forktest has less library code linked in - needs to be small
 	# in order to be able to max out the proc table.
 	@echo "$(ANSI_FG_GREEN)+ LD $(ANSI_NONE)$@"
-	$(LD) $(LDFLAGS) -N -e main -Ttext 0 -o $U/_forktest $U/forktest.o $U/ulib.o $U/usys.o
+	$(LD) $(LDFLAGS) -N -e main -o $U/_forktest $U/forktest.o $U/ulib.o $U/usys.o
 	$(OBJDUMP) -S $U/_forktest > $U/forktest.asm
 
 build/mkfs: mkfs/mkfs.c include/kernel/fs.h include/kernel/param.h
@@ -116,18 +116,14 @@ qemu-gdb: $(K_OBJ_DIR)/kernel $(FS_IMG)
 	@echo "Now run 'gdb' in another window." 1>&2
 	$(QEMU) $(QEMUOPTS) -S $(QEMUGDB)
 
+all: $(K_OBJ_DIR)/kernel $(FS_IMG)
+.DEFAULT_GOAL := all
+
 clean: 
-	rm -rf $U/usys.S mkfs/mkfs build
+	rm -rf mkfs/mkfs build
 
 tags: $(K_OBJS) _init
 	etags *.S *.c
-
-# Prevent deletion of intermediate files, e.g. cat.o, after first build, so
-# that disk image changes after first build are persistent until clean.  More
-# details:
-# http://www.gnu.org/software/make/manual/html_node/Chained-Rules.html
-.PRECIOUS: %.o
-
 
 ANSI_FG_BLACK   = \033[1;30m
 ANSI_FG_RED     = \033[1;31m

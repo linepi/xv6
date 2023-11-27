@@ -41,15 +41,16 @@ sys_wait(void)
 uint64
 sys_sbrk(void)
 {
-  int addr;
+  uint64 ret;
   int n;
 
   if(argint(0, &n) < 0)
     return -1;
-  addr = myproc()->sz;
+  ret = myproc()->heap_end;
   if(growproc(n) < 0)
     return -1;
-  return addr;
+  myproc()->heap_end += n;
+  return ret;
 }
 
 uint64
