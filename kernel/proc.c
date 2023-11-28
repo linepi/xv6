@@ -167,9 +167,8 @@ freeproc(struct proc *p)
     kfree((void*)p->usyscall);
   p->usyscall = 0;
   if(p->pagetable)
-    proc_freepagetable(p->pagetable, p->sz, p->vm_offset);
+    proc_freepagetable(p);
   p->pagetable = 0;
-  p->sz = 0;
   p->pid = 0;
   p->parent = 0;
   p->name[0] = 0;
@@ -177,6 +176,8 @@ freeproc(struct proc *p)
   p->killed = 0;
   p->xstate = 0;
   p->state = UNUSED;
+  p->addrinfo.vm_offset = 0;
+  p->addrinfo.program_sz = 0;
 }
 
 // Create a user page table for a given process,
@@ -197,7 +198,7 @@ proc_pagetable(struct proc *p)
   // to/from user space, so not PTE_U.
   if(mappages(pagetable, TRAMPOLINE, PGSIZE,
               (uint64)trampoline, PTE_R | PTE_X) < 0){
-    uvmfree(pagetable, 0, p->vm_offset);
+    freewalk(pagetable);
     return 0;
   }
 
@@ -205,7 +206,7 @@ proc_pagetable(struct proc *p)
   if(mappages(pagetable, TRAPFRAME, PGSIZE,
               (uint64)(p->trapframe), PTE_R | PTE_W) < 0){
     uvmunmap(pagetable, TRAMPOLINE, 1, 0);
-    uvmfree(pagetable, 0, p->vm_offset);
+    freewalk(pagetable);
     return 0;
   }
 
@@ -213,7 +214,7 @@ proc_pagetable(struct proc *p)
               (uint64)(p->usyscall), PTE_R | PTE_U) < 0){
     uvmunmap(pagetable, TRAMPOLINE, 1, 0);
     uvmunmap(pagetable, TRAPFRAME, 1, 0);
-    uvmfree(pagetable, 0, p->vm_offset);
+    freewalk(pagetable);
     return 0;
   }
 
@@ -223,12 +224,12 @@ proc_pagetable(struct proc *p)
 // Free a process's page table, and free the
 // physical memory it refers to.
 void
-proc_freepagetable(pagetable_t pagetable, uint64 sz, uint64 vm_offset)
+proc_freepagetable(struct proc *p)
 {
-  uvmunmap(pagetable, TRAMPOLINE, 1, 0);
-  uvmunmap(pagetable, TRAPFRAME, 1, 0);
-  uvmunmap(pagetable, USYSCALL, 1, 0);
-  uvmfree(pagetable, sz, vm_offset);
+  uvmunmap(p->pagetable, TRAMPOLINE, 1, 0);
+  uvmunmap(p->pagetable, TRAPFRAME, 1, 0);
+  uvmunmap(p->pagetable, USYSCALL, 1, 0);
+  uvmfree(p);
 }
 
 // a user program that calls exec("/init")
@@ -247,8 +248,8 @@ int proc_rand(struct proc *p) {
   return rand_r(&p->random_seed);
 }
 
-uint64 proc_vm_offset(struct proc *p) {
-  return PGROUNDUP(proc_rand(p) % 0x10000000);
+uint64 proc_gen_heap_top(struct proc *p) {
+  return TRAPFRAME - (proc_rand(p) % 0x100 + 1) * PGSIZE;
 }
 
 // Set up first user process.
@@ -262,13 +263,18 @@ userinit(void)
   
   // allocate one user page and copy init's instructions
   // and data into it.
-  p->vm_offset = 0;
-  uvminit(p->pagetable, initcode, sizeof(initcode), p->vm_offset);
-  p->sz = PGSIZE;
+  char *mem;
+  mem = kalloc();
+  memset(mem, 0, PGSIZE);
+  mappages(p->pagetable, 0, PGSIZE, (uint64)mem, PTE_W|PTE_R|PTE_X|PTE_U);
+  memmove(mem, initcode, sizeof(initcode));
+
+  p->addrinfo.vm_offset = 0;
+  p->addrinfo.program_sz = sizeof(initcode);
 
   // prepare for the very first "return" from kernel to user.
-  p->trapframe->epc = p->vm_offset;      // user program counter
-  p->trapframe->sp = p->vm_offset + PGSIZE;  // user stack pointer
+  p->trapframe->epc = 0;      // user program counter
+  p->trapframe->sp = PGSIZE;  // user stack pointer
 
   safestrcpy(p->name, "initcode", sizeof(p->name));
   p->cwd = namei("/");
@@ -278,23 +284,29 @@ userinit(void)
   release(&p->lock);
 }
 
-// Grow or shrink user memory by n bytes.
+// Grow or shrink user heap memory by n bytes.
 // Return 0 on success, -1 on failure.
 int
 growproc(int n)
 {
-  uint sz;
+  uint64 heap_end;
   struct proc *p = myproc();
 
-  sz = p->sz;
+  heap_end = p->addrinfo.heap_end;
   if(n > 0){
-    if((sz = uvmalloc(p->pagetable, sz, sz + n, p->vm_offset)) == 0) {
+    if (heap_end + n > p->addrinfo.stack_bottom) return -1;
+    if((PGROUNDUP(heap_end) != PGROUNDUP(heap_end + n)) && 
+        uvmalloc(p->pagetable, heap_end, heap_end + n) == -1) {
       return -1;
     }
   } else if(n < 0){
-    sz = uvmdealloc(p->pagetable, sz, sz + n, p->vm_offset);
+    if (heap_end + n > heap_end || heap_end + n < p->addrinfo.heap_start) return -1;
+    if((PGROUNDUP(heap_end) != PGROUNDUP(heap_end + n)) && 
+        uvmdealloc(p->pagetable, heap_end, heap_end + n) == -1) {
+      return -1;
+    }
   }
-  p->sz = sz;
+  p->addrinfo.heap_end += n;
   return 0;
 }
 
@@ -313,14 +325,12 @@ fork(void)
   }
 
   // Copy user memory from parent to child. Both table and memory.
-  if(uvmcopy(p->pagetable, np->pagetable, p->sz, p->vm_offset) < 0){
+  if(uvmcopy(p, np) < 0){
     freeproc(np);
     release(&np->lock);
     return -1;
   }
-  np->sz = p->sz;
-  np->vm_offset = p->vm_offset;
-  np->heap_end = p->heap_end;
+  np->addrinfo = p->addrinfo;
 
   // copy saved user registers.
   *(np->trapframe) = *(p->trapframe);

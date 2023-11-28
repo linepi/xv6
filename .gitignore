@@ -6,6 +6,7 @@ _*
 *.sym
 *.img
 build/
+.vscode/settings.json
 vectors.S
 bootblock
 entryother

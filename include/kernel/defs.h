@@ -88,7 +88,7 @@ int             fork(void);
 int             growproc(int);
 void            proc_mapstacks(pagetable_t);
 pagetable_t     proc_pagetable(struct proc *);
-void            proc_freepagetable(pagetable_t, uint64, uint64);
+void            proc_freepagetable(struct proc *);
 int             kill(int);
 struct cpu*     mycpu(void);
 struct cpu*     getmycpu(void);
@@ -105,7 +105,7 @@ int             either_copyout(int user_dst, uint64 dst, void *src, uint64 len);
 int             either_copyin(void *dst, int user_src, uint64 src, uint64 len);
 void            procdump(void);
 int 						proc_rand(struct proc *p);
-uint64 					proc_vm_offset(struct proc *p);
+uint64 					proc_gen_heap_top(struct proc *p); 
 
 // swtch.S
 void            swtch(struct context*, struct context*);
@@ -165,12 +165,13 @@ void            kvminit(void);
 void            kvminithart(void);
 void            kvmmap(pagetable_t, uint64, uint64, uint64, int);
 int             mappages(pagetable_t, uint64, uint64, uint64, int);
+int							map_onepage(pagetable_t, uint64, uint64, int);
 pagetable_t     uvmcreate(void);
-void            uvminit(pagetable_t, uchar *, uint, uint64);
-uint64          uvmalloc(pagetable_t, uint64, uint64, uint64);
-uint64          uvmdealloc(pagetable_t, uint64, uint64, uint64);
-int             uvmcopy(pagetable_t, pagetable_t, uint64, uint64);
-void            uvmfree(pagetable_t, uint64, uint64);
+int             uvmalloc(pagetable_t, uint64, uint64);
+int             uvmdealloc(pagetable_t, uint64, uint64);
+int             uvmcopy(struct proc *, struct proc *);
+int             uvmvalid(struct proc *, uint64);
+void            uvmfree(struct proc *);
 void            uvmunmap(pagetable_t, uint64, uint64, int);
 void            uvmclear(pagetable_t, uint64);
 uint64          walkaddr(pagetable_t, uint64);
@@ -178,6 +179,7 @@ int             copyout(pagetable_t, uint64, char *, uint64);
 int             copyin(pagetable_t, char *, uint64, uint64);
 int             copyinstr(pagetable_t, char *, uint64, uint64);
 void            vmprint(pagetable_t);
+void            freewalk(pagetable_t pagetable);
 
 // plic.c
 void            plicinit(void);

@@ -46,10 +46,9 @@ sys_sbrk(void)
 
   if(argint(0, &n) < 0)
     return -1;
-  ret = myproc()->heap_end;
+  ret = myproc()->addrinfo.heap_end;
   if(growproc(n) < 0)
     return -1;
-  myproc()->heap_end += n;
   return ret;
 }
 

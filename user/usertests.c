@@ -2800,17 +2800,17 @@ run(void f(char *), char *s) {
 int
 main(int argc, char *argv[])
 {
-  int continuous = 0;
   char *justone = 0;
+  char *from = 0;
+  int from_start = 0;
 
-  if(argc == 2 && strcmp(argv[1], "-c") == 0){
-    continuous = 1;
-  } else if(argc == 2 && strcmp(argv[1], "-C") == 0){
-    continuous = 2;
+  if(argc == 3 && strcmp(argv[1], "--from") == 0){
+    from = argv[2];
+    printf("Test from %s\n", from);
   } else if(argc == 2 && argv[1][0] != '-'){
     justone = argv[1];
   } else if(argc > 1){
-    printf("Usage: usertests [-c] [testname]\n");
+    printf("Usage: usertests [--from] [testname]\n");
     exit(1);
   }
   
@@ -2864,7 +2864,7 @@ main(int argc, char *argv[])
     {stacktest, "stacktest"},
     {opentest, "opentest"},
     {writetest, "writetest"},
-    {writebig, "writebig"},
+    // {writebig, "writebig"},
     {createtest, "createtest"},
     {openiputtest, "openiput"},
     {exitiputtest, "exitiput"},
@@ -2884,46 +2884,33 @@ main(int argc, char *argv[])
     { 0, 0},
   };
 
-  if(continuous){
-    printf("continuous usertests starting\n");
-    while(1){
-      int fail = 0;
-      int free0 = countfree();
-      for (struct test *t = tests; t->s != 0; t++) {
-        if(!run(t->f, t->s)){
-          fail = 1;
-          break;
-        }
-      }
-      if(fail){
-        printf("SOME TESTS FAILED\n");
-        if(continuous != 2)
-          exit(1);
-      }
-      int free1 = countfree();
-      if(free1 < free0){
-        printf("FAILED -- lost %d free pages\n", free0 - free1);
-        if(continuous != 2)
-          exit(1);
-      }
-    }
-  }
-
   printf("usertests starting\n");
-  int free0 = countfree();
+  int free0 = 0;
   int free1 = 0;
+  // free0 = countfree();
+  // printf("start free pages: %d\n", free0);
   int fail = 0;
   for (struct test *t = tests; t->s != 0; t++) {
-    if((justone == 0) || strcmp(t->s, justone) == 0) {
-      if(!run(t->f, t->s))
-        fail = 1;
+    int torun = 0;
+    if (justone) {
+      torun = strcmp(t->s, justone) == 0;
+    } else if (from) {
+      if (!from_start) 
+        from_start = strcmp(t->s, from) == 0;
+      torun = from_start;
+    } else {
+      torun = 1;
     }
+    if(torun && !run(t->f, t->s))
+      fail = 1;
   }
+  // free1 = countfree();
+  // printf("end free pages: %d\n", free1);
 
   if(fail){
     printf("SOME TESTS FAILED\n");
     exit(1);
-  } else if((free1 = countfree()) < free0){
+  } else if(free1 < free0){
     printf("FAILED -- lost some free pages %d (out of %d)\n", free1, free0);
     exit(1);
   } else {

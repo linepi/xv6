@@ -5,6 +5,8 @@
 #include "kernel/riscv.h"
 #include "kernel/defs.h"
 #include "kernel/fs.h"
+#include "kernel/spinlock.h"
+#include "kernel/proc.h"
 
 /*
  * the kernel's page table.
@@ -159,6 +161,23 @@ mappages(pagetable_t pagetable, uint64 va, uint64 size, uint64 pa, int perm)
   return 0;
 }
 
+// -1 for error
+// -2 for remap
+// 0 for success
+int
+map_onepage(pagetable_t pagetable, uint64 va, uint64 pa, int perm)
+{
+  uint64 a;
+  pte_t *pte;
+  a = PGROUNDDOWN(va);
+  if((pte = walk(pagetable, a, 1)) == 0)
+    return -1;
+  if(*pte & PTE_V)
+    return -2;
+  *pte = PA2PTE(pa) | perm | PTE_V;
+  return 0;
+}
+
 // Remove npages of mappings starting from va. va must be
 // page-aligned. The mappings must exist.
 // Optionally free the physical memory.
@@ -199,67 +218,52 @@ uvmcreate()
   return pagetable;
 }
 
-// Load the user initcode into address 0 of pagetable,
-// for the very first process.
-// sz must be less than a page.
-void
-uvminit(pagetable_t pagetable, uchar *src, uint sz, uint64 vm_offset)
+// Allocate PTEs and physical memory to grow process from old_addr to new_addr
+// need not be page aligned. 
+// Returns allocated page number or -1 on error.
+int
+uvmalloc(pagetable_t pagetable, uint64 old_addr, uint64 new_addr)
 {
+  old_addr = PGROUNDDOWN(old_addr);
+  new_addr = PGROUNDUP(new_addr);
+  if(new_addr <= old_addr)
+    return 0;
+
+  int ret = 0;
   char *mem;
-
-  if(sz >= PGSIZE)
-    panic("inituvm: more than a page");
-  mem = kalloc();
-  memset(mem, 0, PGSIZE);
-  mappages(pagetable, vm_offset, PGSIZE, (uint64)mem, PTE_W|PTE_R|PTE_X|PTE_U);
-  memmove(mem, src, sz);
-}
-
-// Allocate PTEs and physical memory to grow process from oldsz to
-// newsz, which need not be page aligned.  Returns new size or 0 on error.
-uint64
-uvmalloc(pagetable_t pagetable, uint64 oldsz, uint64 newsz, uint64 vm_offset)
-{
-  char *mem;
-  uint64 old_addr = oldsz == 0 ? PGROUNDDOWN(oldsz + vm_offset) : PGROUNDUP(oldsz + vm_offset);
-  uint64 new_addr = PGROUNDUP(newsz + vm_offset);
-
-  if(newsz < oldsz)
-    return oldsz;
-
-  oldsz = PGROUNDUP(oldsz);
   for(uint64 a = old_addr; a < new_addr; a += PGSIZE){
     mem = kalloc();
     if(mem == 0){
-      uvmdealloc(pagetable, a - vm_offset, oldsz, vm_offset);
-      return 0;
+      uvmunmap(pagetable, old_addr, ret, 1);
+      return -1;
     }
     memset(mem, 0, PGSIZE);
-    if(mappages(pagetable, a, PGSIZE, (uint64)mem, PTE_W|PTE_X|PTE_R|PTE_U) != 0){
+    int rc = map_onepage(pagetable, a, (uint64)mem, PTE_W|PTE_X|PTE_R|PTE_U);
+    if (rc == -1) {
       kfree(mem);
-      uvmdealloc(pagetable, a - vm_offset + PGSIZE, oldsz, vm_offset);
-      return 0;
+      uvmunmap(pagetable, old_addr, ret, 1);
+      return -1;
+    } else if (rc == -2) {
+      kfree(mem);
+    } else {
+      ret += 1;
     }
   }
-  return newsz;
+  return ret;
 }
 
-// Deallocate user pages to bring the process size from oldsz to
-// newsz.  oldsz and newsz need not be page-aligned, nor does newsz
-// need to be less than oldsz.  oldsz can be larger than the actual
-// process size.  Returns the new process size.
-uint64
-uvmdealloc(pagetable_t pagetable, uint64 oldsz, uint64 newsz, uint64 vm_offset)
+// Deallocate user pages to bring the process size from old_addr to
+// new_addr. oldsz and newsz need not be page-aligned.
+// Returns deallocated page number or -1 on error. 
+int
+uvmdealloc(pagetable_t pagetable, uint64 old_addr, uint64 new_addr)
 {
-  if(newsz >= oldsz)
-    return oldsz;
+  if(PGROUNDUP(new_addr) >= PGROUNDUP(old_addr))
+    return 0;
 
-  if(PGROUNDUP(newsz) < PGROUNDUP(oldsz)){
-    int npages = (PGROUNDUP(oldsz + vm_offset) - PGROUNDUP(newsz + vm_offset)) / PGSIZE;
-    uvmunmap(pagetable, PGROUNDDOWN(newsz + vm_offset), npages, 1);
-  }
-
-  return newsz;
+  int npages = (PGROUNDUP(old_addr) - PGROUNDUP(new_addr)) / PGSIZE;
+  uvmunmap(pagetable, PGROUNDUP(new_addr), npages, 1);
+  return npages;
 }
 
 // Recursively free page-table pages.
@@ -285,11 +289,13 @@ freewalk(pagetable_t pagetable)
 // Free user memory pages,
 // then free page-table pages.
 void
-uvmfree(pagetable_t pagetable, uint64 sz, uint64 vm_offset)
+uvmfree(struct proc *p)
 {
-  if(sz > 0)
-    uvmunmap(pagetable, PGROUNDDOWN(vm_offset), PGROUNDUP(sz)/PGSIZE, 1);
-  freewalk(pagetable);
+  uvmunmap(p->pagetable, PROC_CODE_BASE(p), PROC_CODE_PAGES(p), 1);
+  uvmunmap(p->pagetable, PROC_STACK_BASE(p), PROC_STACK_PAGES(p), 1);
+  uvmunmap(p->pagetable, PROC_HEAP_BASE(p), PROC_HEAP_PAGES(p), 1);
+  if (p->pagetable)
+    freewalk(p->pagetable);
 }
 
 // Given a parent process's page table, copy
@@ -299,32 +305,42 @@ uvmfree(pagetable_t pagetable, uint64 sz, uint64 vm_offset)
 // returns 0 on success, -1 on failure.
 // frees any allocated pages on failure.
 int
-uvmcopy(pagetable_t old, pagetable_t new, uint64 sz, uint64 vm_offset)
+uvmcopy(struct proc *father, struct proc *child)
 {
   pte_t *pte;
   uint64 pa, i;
   uint flags;
   char *mem;
+  int idx;
 
-  for(i = PGROUNDDOWN(vm_offset); i < PGROUNDUP(sz + vm_offset); i += PGSIZE){
-    if((pte = walk(old, i, 0)) == 0)
-      panic("uvmcopy: pte should exist");
-    if((*pte & PTE_V) == 0)
-      panic("uvmcopy: page not present");
-    pa = PTE2PA(*pte);
-    flags = PTE_FLAGS(*pte);
-    if((mem = kalloc()) == 0)
-      goto err;
-    memmove(mem, (char*)pa, PGSIZE);
-    if(mappages(new, i, PGSIZE, (uint64)mem, flags) != 0){
-      kfree(mem);
-      goto err;
+  uint64 start_addrs[3] = {PROC_CODE_BASE(father), PROC_STACK_BASE(father), PROC_HEAP_BASE(father)};
+  uint64 end_addrs[3] = {PROC_CODE_END(father), PROC_STACK_END(father), PROC_HEAP_END(father)};
+
+  for (idx = 0; idx < 3; idx++) {
+    for(i = start_addrs[idx]; i < end_addrs[idx]; i += PGSIZE){
+      if((pte = walk(father->pagetable, i, 0)) == 0)
+        panic("uvmcopy: pte should exist");
+      if((*pte & PTE_V) == 0)
+        panic("uvmcopy: page not present");
+      pa = PTE2PA(*pte);
+      flags = PTE_FLAGS(*pte);
+      if((mem = kalloc()) == 0)
+        goto err;
+      memmove(mem, (char*)pa, PGSIZE);
+      if(mappages(child->pagetable, i, PGSIZE, (uint64)mem, flags) != 0){
+        kfree(mem);
+        goto err;
+      }
     }
   }
   return 0;
 
  err:
-  uvmunmap(new, 0, i / PGSIZE, 1);
+  if (idx > 0)
+    uvmunmap(child->pagetable, start_addrs[0], (end_addrs[0] - start_addrs[0]) / PGSIZE, 1);
+  if (idx > 1)
+    uvmunmap(child->pagetable, start_addrs[1], (end_addrs[1] - start_addrs[1]) / PGSIZE, 1);
+  uvmunmap(child->pagetable, start_addrs[idx], (i - start_addrs[1]) / PGSIZE, 1);
   return -1;
 }
 
@@ -339,6 +355,12 @@ uvmclear(pagetable_t pagetable, uint64 va)
   if(pte == 0)
     panic("uvmclear");
   *pte &= ~PTE_U;
+}
+
+int 
+uvmvalid(struct proc *p, uint64 va) 
+{
+  return 1;
 }
 
 // Copy from kernel to user.

@@ -1,6 +1,7 @@
 .SILENT:
 K=kernel
 U=user
+MEMORY=128
 
 TOOLPREFIX = riscv64-unknown-elf-
 FS_IMG = build/fs.img
@@ -25,6 +26,7 @@ OBJDUMP = $(TOOLPREFIX)objdump
 
 CFLAGS = -Wall -Werror -O0 -fno-omit-frame-pointer -ggdb3
 CFLAGS += -MD -Wno-infinite-recursion
+CFLAGS += -DMEMORY_SIZE_MEGABYTES=$(MEMORY)
 CFLAGS += -mcmodel=medany
 CFLAGS += -ffreestanding -fno-common -nostdlib -mno-relax
 CFLAGS += -I$(XV6_HOME)/include
@@ -105,7 +107,7 @@ ifndef CPUS
 CPUS := 3
 endif
 
-QEMUOPTS = -machine virt -bios none -kernel $(K_OBJ_DIR)/kernel -m 128M -smp $(CPUS) -nographic
+QEMUOPTS = -machine virt -bios none -kernel $(K_OBJ_DIR)/kernel -m $(MEMORY)M -smp $(CPUS) -nographic
 QEMUOPTS += -drive file=$(FS_IMG),if=none,format=raw,id=x0
 QEMUOPTS += -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0
 

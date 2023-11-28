@@ -1,3 +1,6 @@
+#pragma once
+#include "kernel/riscv.h"
+
 // Saved registers for kernel context switches.
 struct context {
   uint64 ra;
@@ -82,11 +85,29 @@ struct trapframe {
 
 enum procstate { UNUSED, USED, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
+struct addrinfo {
+  uint64 stack_top;
+  uint64 stack_bottom;
+  uint64 heap_end;
+  uint64 heap_start;
+  uint64 vm_offset;          // virtual memory offset
+  uint64 program_sz;         // program code bytes
+};
+
+#define addrinfo_clear(addrinfo) do { \
+  addrinfo.stack_top = 0; \
+  addrinfo.stack_bottom = 0; \
+  addrinfo.heap_end = 0; \
+  addrinfo.heap_start = 0; \
+  addrinfo.vm_offset = 0; \
+  addrinfo.program_sz = 0; \
+} while(0)
+
 // Per-process state
 struct proc {
   struct spinlock lock;
 
-  // p->lock must be held when using these:
+  // (p)->lock must be held when using these:
   enum procstate state;        // Process state
   void *chan;                  // If non-zero, sleeping on chan
   int killed;                  // If non-zero, have been killed
@@ -96,12 +117,10 @@ struct proc {
   // wait_lock must be held when using this:
   struct proc *parent;         // Parent process
 
-  // these are private to the process, so p->lock need not be held.
+  // these are private to the process, so (p)->lock need not be held.
   uint64 kstack;               // Virtual address of kernel stack
-  uint64 sz;                   // Size of process memory (bytes)
-  uint64 vm_offset;            // virtual memory offset
-  uint64 heap_end;
-  uint random_seed;
+  struct addrinfo addrinfo; 
+
   pagetable_t pagetable;       // User page table
   struct trapframe *trapframe; // data page for trampoline.S
   struct context context;      // swtch() here to run process
@@ -111,4 +130,22 @@ struct proc {
 
   int trace_mask;    // trace系统调用参数
   struct usyscall *usyscall;
+  uint random_seed;
 };
+
+
+#define PROC_CODE_BASE(p) (PGROUNDDOWN((p)->addrinfo.vm_offset))
+#define PROC_CODE_END(p) (PGROUNDUP((p)->addrinfo.vm_offset + (p)->addrinfo.program_sz))
+#define PROC_CODE_PAGES(p) \
+  ((p)->addrinfo.program_sz ? (PROC_CODE_END(p) - PROC_CODE_BASE(p)) / PGSIZE : 0)
+
+#define PROC_STACK_BASE(p) (PGROUNDDOWN((p)->addrinfo.stack_bottom))
+#define PROC_STACK_END(p) (PGROUNDUP((p)->addrinfo.stack_top))
+#define PROC_STACK_PAGES(p) ((PROC_STACK_END(p) - PROC_STACK_BASE(p)) / PGSIZE)
+
+#define PROC_HEAP_BASE(p) (PGROUNDDOWN((p)->addrinfo.heap_start)) 
+#define PROC_HEAP_END(p) (PGROUNDUP((p)->addrinfo.heap_end)) 
+#define PROC_HEAP_PAGES(p) ((PROC_HEAP_END(p) - PROC_HEAP_BASE(p)) / PGSIZE)
+
+#define PROC_PAGES(p) (PROC_CODE_PAGES(p) + PROC_HEAP_PAGES(p) + PROC_STACK_PAGES(p))
+#define PROC_SZ(p) (PROC_PAGES(p) * PGSIZE)  // Size of process memory (bytes, multiple of page size)
