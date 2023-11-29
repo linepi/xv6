@@ -1,4 +1,4 @@
-.SILENT:
+# .SILENT:
 K=kernel
 U=user
 MEMORY=128

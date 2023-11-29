@@ -103,3 +103,38 @@ sys_trace(void)
   argint(0, &(myproc()->trace_mask));
   return 0;
 }
+
+int
+sys_pgaccess(void)
+{
+  uint64 addr; // 虚拟页起始地址
+  int num;	   // 待检测虚拟页个数
+  uint64 mask; // 待写入用户空间的buf
+	
+  // 得到3个参数
+  if(argaddr(0, &addr) < 0)
+    return -1;
+  if(argint(1, &num) < 0)
+    return -1;
+  if(argaddr(2, &mask) < 0)
+    return -1;
+  // mask只有64位，所有待检测页最大个数为64
+  int limit = 64;
+  if(num > limit)
+    return -1;
+  pagetable_t pagetable = myproc()->pagetable;
+
+  uint64 bufmask = 0;
+  // 遍历所有页
+  for(int i = 0; i < num; i++){
+    uint64 va = addr + i*PGSIZE;
+    pte_t *pte = walk(pagetable, va, 0); // 得到PTE
+    if(*pte & PTE_A){
+      bufmask |= (1 << i); // 设置PTE
+      *pte &= ~PTE_A;	   // 清空PTE_A
+    }
+  }
+  // 写回用户空间
+  copyout(pagetable, mask, (char *)&bufmask, num % 8 == 0 ? num / 8 : num / 8 + 1);
+  return 0;
+}

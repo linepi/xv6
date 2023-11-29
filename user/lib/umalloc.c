@@ -1,5 +1,6 @@
 #include "kernel/types.h"
 #include "kernel/stat.h"
+#include "kernel/riscv.h"
 #include "kernel/param.h"
 #include "user/user.h"
 
@@ -49,8 +50,8 @@ morecore(uint nu)
   char *p;
   Header *hp;
 
-  if(nu < 4096)
-    nu = 4096;
+  if(nu < PGSIZE)
+    nu = PGSIZE;
   p = sbrk(nu * sizeof(Header));
   if(p == (char*)-1)
     return 0;

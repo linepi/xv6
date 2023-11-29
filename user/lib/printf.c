@@ -38,6 +38,37 @@ printint(int fd, int xx, int base, int sgn)
     putc(fd, buf[i]);
 }
 
+// Function to print a long integer in any base (binary, decimal, hex, etc.)
+static void
+printlong(int fd, long num, int base, int sign) {
+  char buf[64];
+  int i = 0;
+  int is_negative = 0;
+
+  // Handle negative numbers if sign is true.
+  if (sign && num < 0) {
+    is_negative = 1;
+    num = -num;
+  }
+
+  // Process individual digits
+  do {
+    buf[i++] = digits[num % base];
+    num /= base;
+  } while (num > 0);
+
+  // If number is negative, append '-'
+  if (is_negative) {
+    buf[i++] = '-';
+  }
+
+  // Print the number
+  while (--i >= 0) {
+    putc(fd, buf[i]);
+  }
+}
+
+
 static void
 printptr(int fd, uint64 x) {
   int i;
@@ -67,7 +98,16 @@ vprintf(int fd, const char *fmt, va_list ap)
       if(c == 'd'){
         printint(fd, va_arg(ap, int), 10, 1);
       } else if(c == 'l') {
-        printint(fd, va_arg(ap, uint64), 10, 0);
+        c = fmt[++i] & 0xff; // Get the next character after 'l'
+        if(c == 'd'){
+          printlong(fd, va_arg(ap, long), 10, 1);
+        } else if(c == 'x'){
+          printlong(fd, va_arg(ap, long), 16, 1);
+        } else {
+          // If it is not %ld or %lx, print the 'l' and treat the next character as a new format specifier
+          putc(fd, 'l');
+          i--; // The next iteration will handle the format specifier
+        }
       } else if(c == 'x') {
         printint(fd, va_arg(ap, int), 16, 0);
       } else if(c == 'p') {

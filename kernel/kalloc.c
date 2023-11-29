@@ -1,6 +1,6 @@
 // Physical memory allocator, for user processes,
 // kernel stacks, page-table pages,
-// and pipe buffers. Allocates whole 4096-byte pages.
+// and pipe buffers. Allocates whole pages.
 #include "kernel/types.h"
 #include "kernel/param.h"
 #include "kernel/memlayout.h"
@@ -61,7 +61,7 @@ kfree(void *pa)
   release(&kmem.lock);
 }
 
-// Allocate one 4096-byte page of physical memory.
+// Allocate one page of physical memory.
 // Returns a pointer that the kernel can use.
 // Returns 0 if the memory cannot be allocated.
 void *

@@ -1,3 +1,4 @@
+#pragma once
 struct buf;
 struct context;
 struct file;
@@ -175,10 +176,12 @@ void            uvmfree(struct proc *);
 void            uvmunmap(pagetable_t, uint64, uint64, int);
 void            uvmclear(pagetable_t, uint64);
 uint64          walkaddr(pagetable_t, uint64);
+pte_t *         walk(pagetable_t pagetable, uint64 va, int alloc);
 int             copyout(pagetable_t, uint64, char *, uint64);
 int             copyin(pagetable_t, char *, uint64, uint64);
 int             copyinstr(pagetable_t, char *, uint64, uint64);
 void            vmprint(pagetable_t);
+void						xprint(pagetable_t pagetable, uint64 srcva, uint64 bytes);
 void            freewalk(pagetable_t pagetable);
 
 // plic.c

@@ -5,16 +5,14 @@
 #include "user/user.h"
 
 void ugetpid_test();
-void
-err(char *why);
+void pgaccess_test();
 
 int
 main(int argc, char *argv[])
 {
   ugetpid_test();
+  pgaccess_test();
   printf("pgtbltest: all tests succeeded\n");
-  if (getpid() != ugetpid())
-    err("missmatched PID");
   exit(0);
 }
 
@@ -48,4 +46,30 @@ ugetpid_test()
     exit(0);
   }
   printf("ugetpid_test: OK\n");
+}
+
+void
+pgaccess_test()
+{
+  char *buf;
+  uint64 **buf_addr = (uint64 **)&buf;
+  printf("buf addr is 0x%lx\n", (uint64)buf_addr);
+  unsigned int abits;
+  printf("pgaccess_test starting\n");
+  testname = "pgaccess_test";
+  buf = malloc(32 * PGSIZE);
+  printf("buf is 0x%x\n", *buf_addr);
+  if (pgaccess(buf, 32, &abits) < 0)
+    err("pgaccess failed");
+  printf("buf is 0x%x\n", *buf_addr);
+
+  buf[PGSIZE * 1] += 1;
+  buf[PGSIZE * 2] += 1;
+  buf[PGSIZE * 30] += 1;
+  if (pgaccess(buf, 32, &abits) < 0)
+    err("pgaccess failed");
+  if (abits != ((1 << 1) | (1 << 2) | (1 << 30)))
+    err("incorrect access bits set");
+  free(buf);
+  printf("pgaccess_test: OK\n");
 }

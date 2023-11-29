@@ -138,7 +138,7 @@ loadseg(pagetable_t pagetable, uint64 va, struct inode *ip, uint offset, uint sz
 
   while (sz > 0) {
     pa = walkaddr(pagetable, va);
-    pa += va % 4096;
+    pa += va % PGSIZE;
     if(sz < PGSIZE) {
       n = sz;
     } else {

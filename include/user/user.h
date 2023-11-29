@@ -24,6 +24,7 @@ char* sbrk(int);
 int sleep(int);
 int uptime(void);
 int trace(int);
+int pgaccess(const void*, int, void*);
 
 // ulib.c
 int stat(const char*, struct stat*);

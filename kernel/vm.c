@@ -456,10 +456,32 @@ copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
   }
 }
 
+void
+xprint(pagetable_t pagetable, uint64 srcva, uint64 bytes) 
+{
+  char buf[200];
+  if (copyin(pagetable, buf, srcva, bytes) != 0)
+    return;
+  printf("xprint:\n");
+  int idx = 0;
+  while (bytes > 0) {
+    int n = bytes >= 16 ? 16 : bytes;
+    printf("-- ");
+    for (int i = idx; i < idx + n; i++) {
+      printf("%x ", buf[i]);
+    }
+    printf("\n");
+    idx += n;
+    bytes -= n;
+  }
+}
+
 /**
  * @param pagetable 所要打印的页表
  * @param level 页表的层级
  */
+static uint64 vmprint_buf[2];
+
 static void
 _vmprint(pagetable_t pagetable, int level){
   // there are 2^9 = 512 PTEs in a page table.
@@ -472,9 +494,23 @@ _vmprint(pagetable_t pagetable, int level){
         printf("..");
       }
       uint64 child = PTE2PA(pte);
-      printf("%d: pte %p pa %p\n", i, pte, child);
+      printf("%d", i);
+      if (level == 3)
+        printf("(0x%lx)", E2VA(vmprint_buf[0], vmprint_buf[1], i));
+      printf(": pte 0x%lx", pte);
+      // print pte flag
+      printf("[");
+      if (pte & PTE_V) printf("V");
+      if (pte & PTE_R) printf("R");
+      if (pte & PTE_W) printf("W");
+      if (pte & PTE_X) printf("X");
+      if (pte & PTE_U) printf("U");
+      if (pte & PTE_A) printf("A");
+      printf("]");
+      printf(" pa 0x%lx\n", child);
       if((pte & (PTE_R|PTE_W|PTE_X)) == 0){
         // this PTE points to a lower-level page table.
+        vmprint_buf[level - 1] = i;
         _vmprint((pagetable_t)child, level + 1);
       }
     }

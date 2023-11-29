@@ -22,4 +22,5 @@ DEF_SYSCALL(19, link)
 DEF_SYSCALL(20, mkdir)
 DEF_SYSCALL(21, close)
 DEF_SYSCALL(22, trace)
+DEF_SYSCALL(23, pgaccess)
 #endif

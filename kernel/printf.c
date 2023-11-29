@@ -49,6 +49,32 @@ printint(int xx, int base, int sign)
     consputc(buf[i]);
 }
 
+// Function to print a long integer in any base (binary, decimal, hex, etc.)
+static void 
+printlong(long num, int base, int sign) {
+  char buf[64];
+  int i = 0;
+  int is_negative = 0;
+
+  if (sign && num < 0) {
+    is_negative = 1;
+    num = -num;
+  }
+
+  do {
+    buf[i++] = digits[num % base];
+    num /= base;
+  } while (num > 0);
+
+  if (is_negative) {
+    buf[i++] = '-';
+  }
+
+  while (--i >= 0)
+    consputc(buf[i]);
+}
+
+
 static void
 printptr(uint64 x)
 {
@@ -89,6 +115,18 @@ printf(char *fmt, ...)
       break;
     case 'x':
       printint(va_arg(ap, int), 16, 1);
+      break;
+    case 'l':
+      c = fmt[++i] & 0xff; // Get the next character after 'l'
+      if(c == 'd'){
+        printlong(va_arg(ap, long), 10, 1);
+      } else if(c == 'x'){
+        printlong(va_arg(ap, long), 16, 1);
+      } else {
+        // If it is not %ld or %lx, print the 'l' and treat the next character as a new format specifier
+        consputc('l');
+        i--; // The next iteration will handle the format specifier
+      }
       break;
     case 'p':
       printptr(va_arg(ap, uint64));
