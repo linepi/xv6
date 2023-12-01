@@ -12,9 +12,9 @@ int
 fetchaddr(uint64 addr, uint64 *ip)
 {
   struct proc *p = myproc();
-  if(!uaddrvalid(p, addr))
+  if(!uaddrvalid(p, addr) || !uaddrvalid(p, addr + 7))
     return -1;
-  if(copyin(p->pagetable, (char *)ip, addr, sizeof(*ip)) != 0)
+  if(copyin((char *)ip, addr, sizeof(*ip)) != 0)
     return -1;
   return 0;
 }
@@ -27,7 +27,7 @@ fetchstr(uint64 addr, char *buf, int max)
   struct proc *p = myproc();
   if(!uaddrvalid(p, addr))
     return -1;
-  int err = copyinstr(p->pagetable, buf, addr, max);
+  int err = copyinstr(buf, addr, max);
   if(err < 0)
     return err;
   return strlen(buf);

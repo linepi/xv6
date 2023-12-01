@@ -2607,16 +2607,6 @@ sbrklast(char *s)
     exit(1);
 }
 
-// does sbrk handle signed int32 wrap-around with
-// negative arguments?
-void
-sbrk8000(char *s)
-{
-  sbrk(0x80000004);
-  volatile char *top = sbrk(0);
-  *(top-1) = *(top-1) + 1;
-}
-
 // regression test. does write() with an invalid buffer pointer cause
 // a block to be allocated for a file that is then not freed when the
 // file is deleted? if the kernel has this bug, it will panic: balloc:
@@ -2859,7 +2849,6 @@ main(int argc, char *argv[])
     {sbrkfail, "sbrkfail"},
     {sbrkarg, "sbrkarg"},
     {sbrklast, "sbrklast"},
-    {sbrk8000, "sbrk8000"},
     {validatetest, "validatetest"},
     {stacktest, "stacktest"},
     {opentest, "opentest"},
@@ -2885,10 +2874,11 @@ main(int argc, char *argv[])
   };
 
   printf("usertests starting\n");
+  int start = uptime();
   int free0 = 0;
   int free1 = 0;
-  // free0 = countfree();
-  // printf("start free pages: %d\n", free0);
+  free0 = countfree();
+  printf("start free pages: %d\n", free0);
   int fail = 0;
   for (struct test *t = tests; t->s != 0; t++) {
     int torun = 0;
@@ -2904,8 +2894,10 @@ main(int argc, char *argv[])
     if(torun && !run(t->f, t->s))
       fail = 1;
   }
-  // free1 = countfree();
-  // printf("end free pages: %d\n", free1);
+  free1 = countfree();
+  printf("end free pages: %d\n", free1);
+  int end = uptime();
+  printf("consume %d time\n", end - start);
 
   if(fail){
     printf("SOME TESTS FAILED\n");

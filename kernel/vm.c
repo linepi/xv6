@@ -376,7 +376,14 @@ uvmcopy(struct proc *father, struct proc *child)
         kfree(mem);
         goto err;
       }
+
+      if((pte = walk(father->kpagetable, i, 0)) == 0)
+        panic("uvmcopy: pte should exist");
+      if((*pte & PTE_V) == 0)
+        panic("uvmcopy: page not present");
+      flags = PTE_FLAGS(*pte);
       if(mappages(child->kpagetable, i, PGSIZE, (uint64)mem, flags) != 0){
+        upageunmap(child->pagetable, i, 1, 0);
         kfree(mem);
         goto err;
       }
@@ -414,7 +421,14 @@ upageclear(pagetable_t pagetable, uint64 va)
 int 
 uaddrvalid(struct proc *p, uint64 va) 
 {
-  return 1;
+  uint64 start_addrs[3] = {PROC_CODE_BASE(p), PROC_STACK_BASE(p), PROC_HEAP_BASE(p)};
+  uint64 end_addrs[3] = {PROC_CODE_END(p), PROC_STACK_END(p), PROC_HEAP_END(p)};
+  for (int i = 0; i < 3; i++) {
+    if (va >= start_addrs[i] && va < end_addrs[i]) {
+      return 1;
+    }
+  }
+  return 0;
 }
 
 // Copy from kernel to user.
@@ -423,47 +437,43 @@ uaddrvalid(struct proc *p, uint64 va)
 int
 copyout(pagetable_t pagetable, uint64 dstva, char *src, uint64 len)
 {
-  uint64 n, va0, pa0;
+  if (pagetable) {
+    uint64 n, va0, pa0;
 
-  while(len > 0){
-    va0 = PGROUNDDOWN(dstva);
-    pa0 = walkaddr(pagetable, va0);
-    if(pa0 == 0)
+    while(len > 0){
+      va0 = PGROUNDDOWN(dstva);
+      pa0 = walkaddr(pagetable, va0);
+      if(pa0 == 0)
+        return -1;
+      n = PGSIZE - (dstva - va0);
+      if(n > len)
+        n = len;
+      memmove((void *)(pa0 + (dstva - va0)), src, n);
+
+      len -= n;
+      src += n;
+      dstva = va0 + PGSIZE;
+    }
+    return 0;
+  } else {
+    struct proc *p = myproc();
+    if (!uaddrvalid(p, dstva) || !uaddrvalid(p, dstva + len - 1))
       return -1;
-    n = PGSIZE - (dstva - va0);
-    if(n > len)
-      n = len;
-    memmove((void *)(pa0 + (dstva - va0)), src, n);
-
-    len -= n;
-    src += n;
-    dstva = va0 + PGSIZE;
+    memmove((void *)dstva, src, len);
+    return 0;
   }
-  return 0;
 }
 
 // Copy from user to kernel.
 // Copy len bytes to dst from virtual address srcva in a given page table.
 // Return 0 on success, -1 on error.
 int
-copyin(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len)
+copyin(char *dst, uint64 srcva, uint64 len)
 {
-  uint64 n, va0, pa0;
-
-  while(len > 0){
-    va0 = PGROUNDDOWN(srcva);
-    pa0 = walkaddr(pagetable, va0);
-    if(pa0 == 0)
-      return -1;
-    n = PGSIZE - (srcva - va0);
-    if(n > len)
-      n = len;
-    memmove(dst, (void *)(pa0 + (srcva - va0)), n);
-
-    len -= n;
-    dst += n;
-    srcva = va0 + PGSIZE;
-  }
+  struct proc *p = myproc();
+  if (!uaddrvalid(p, srcva) || !uaddrvalid(p, srcva + len - 1))
+    return -1;
+  memmove(dst, (void *)srcva, len);
   return 0;
 }
 
@@ -472,57 +482,39 @@ copyin(pagetable_t pagetable, char *dst, uint64 srcva, uint64 len)
 // until a '\0', or max.
 // Return 0 on success, -1 on error.
 int
-copyinstr(pagetable_t pagetable, char *dst, uint64 srcva, uint64 max)
+copyinstr(char *dst, uint64 srcva, uint64 max)
 {
-  uint64 n, va0, pa0;
-  int got_null = 0;
-
-  while(got_null == 0 && max > 0){
-    va0 = PGROUNDDOWN(srcva);
-    pa0 = walkaddr(pagetable, va0);
-    if(pa0 == 0)
+  struct proc *p = myproc();
+  char *src = (char *)srcva;
+  int gotnull = 0;
+  while(max-- > 0) {
+    char t;
+    if (!uaddrvalid(p, (uint64)src)) {
       return -1;
-    n = PGSIZE - (srcva - va0);
-    if(n > max)
-      n = max;
-
-    char *p = (char *) (pa0 + (srcva - va0));
-    while(n > 0){
-      if(*p == '\0'){
-        *dst = '\0';
-        got_null = 1;
-        break;
-      } else {
-        *dst = *p;
-      }
-      --n;
-      --max;
-      p++;
-      dst++;
     }
-
-    srcva = va0 + PGSIZE;
+    t = *dst++ = *src++;
+    if (t == 0) {
+      gotnull = 1;
+      break;
+    }
   }
-  if(got_null){
+  if (gotnull)
     return 0;
-  } else {
+  else
     return -1;
-  }
 }
 
 void
 xprint(pagetable_t pagetable, uint64 srcva, uint64 bytes) 
 {
-  char buf[200];
-  if (copyin(pagetable, buf, srcva, bytes) != 0)
-    return;
+  char *pa = (char *)vmpa(pagetable, srcva);
   printf("xprint:\n");
   int idx = 0;
   while (bytes > 0) {
     int n = bytes >= 16 ? 16 : bytes;
     printf("-- ");
     for (int i = idx; i < idx + n; i++) {
-      printf("%x ", buf[i]);
+      printf("%x ", pa[i]);
     }
     printf("\n");
     idx += n;
@@ -611,4 +603,22 @@ print_page_info(pagetable_t pagetable)
   int ret = 0, size = 0;
   _page_info(pagetable, &ret, &size);
   printf("mapped pages: %d, occupy space: %d kb\n", ret, size/1024);
+}
+
+void 
+print_pte_info(pagetable_t pagetable, uint64 va)
+{
+  pte_t *ptep = walk(pagetable, va, 0);
+  pte_t pte = *ptep;
+  printf("pte 0x%lx", pte);
+  // print pte flag
+  printf("[");
+  if (pte & PTE_V) printf("V");
+  if (pte & PTE_R) printf("R");
+  if (pte & PTE_W) printf("W");
+  if (pte & PTE_X) printf("X");
+  if (pte & PTE_U) printf("U");
+  if (pte & PTE_A) printf("A");
+  printf("]");  
+  printf(" pa 0x%lx\n", PTE2PA(pte));
 }

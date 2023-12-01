@@ -186,8 +186,8 @@ void            free_pagetable_pages(pagetable_t pagetable, int);
 void            free_pagetable_all(pagetable_t pagetable);
 
 int             copyout(pagetable_t, uint64, char *, uint64);
-int             copyin(pagetable_t, char *, uint64, uint64);
-int             copyinstr(pagetable_t, char *, uint64, uint64);
+int             copyin(char *, uint64, uint64);
+int             copyinstr(char *, uint64, uint64);
 
 void            vmprint(pagetable_t);
 void						xprint(pagetable_t pagetable, uint64 srcva, uint64 bytes);

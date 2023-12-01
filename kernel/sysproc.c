@@ -135,6 +135,6 @@ sys_pgaccess(void)
     }
   }
   // 写回用户空间
-  copyout(pagetable, mask, (char *)&bufmask, num % 8 == 0 ? num / 8 : num / 8 + 1);
+  copyout(0, mask, (char *)&bufmask, num % 8 == 0 ? num / 8 : num / 8 + 1);
   return 0;
 }
