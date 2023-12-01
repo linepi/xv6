@@ -44,9 +44,6 @@ kvmmake(void)
   // map the trampoline for trap entry/exit to
   // the highest virtual address in the kernel.
   kvmmap(kpgtbl, TRAMPOLINE, (uint64)trampoline, PGSIZE, PTE_R | PTE_X);
-
-  // map kernel stacks
-  proc_mapstacks(kpgtbl);
   
   return kpgtbl;
 }
@@ -99,7 +96,7 @@ walk(pagetable_t pagetable, uint64 va, int alloc)
   return &pagetable[PX(0, va)];
 }
 
-// Look up a virtual address, return the physical address,
+// Look up a virtual address, return the physical page address 
 // or 0 if not mapped.
 // Can only be used to look up user pages.
 uint64
@@ -120,6 +117,31 @@ walkaddr(pagetable_t pagetable, uint64 va)
     return 0;
   pa = PTE2PA(*pte);
   return pa;
+}
+
+uint64
+kvmpa(uint64 va)
+{
+  return vmpa(myproc()->kpagetable, va);
+}
+
+uint64
+vmpa(pagetable_t pagetable, uint64 va)
+{
+  if(va >= MAXVA)
+    return 0;
+
+  uint64 off = va % PGSIZE;
+  pte_t *pte;
+  uint64 pa;
+
+  pte = walk(pagetable, va, 0);
+  if(pte == 0)
+    panic("vmpa");
+  if((*pte & PTE_V) == 0)
+    panic("vmpa");
+  pa = PTE2PA(*pte);
+  return pa + off;
 }
 
 // add a mapping to the kernel page table.
@@ -182,21 +204,21 @@ map_onepage(pagetable_t pagetable, uint64 va, uint64 pa, int perm)
 // page-aligned. The mappings must exist.
 // Optionally free the physical memory.
 void
-uvmunmap(pagetable_t pagetable, uint64 va, uint64 npages, int do_free)
+upageunmap(pagetable_t pagetable, uint64 va, uint64 npages, int do_free)
 {
   uint64 a;
   pte_t *pte;
 
   if((va % PGSIZE) != 0)
-    panic("uvmunmap: not aligned");
+    panic("upageunmap: not aligned");
 
   for(a = va; a < va + npages*PGSIZE; a += PGSIZE){
     if((pte = walk(pagetable, a, 0)) == 0)
-      panic("uvmunmap: walk");
+      panic("upageunmap: walk");
     if((*pte & PTE_V) == 0)
-      panic("uvmunmap: not mapped");
+      panic("upageunmap: not mapped");
     if(PTE_FLAGS(*pte) == PTE_V)
-      panic("uvmunmap: not a leaf");
+      panic("upageunmap: not a leaf");
     if(do_free){
       uint64 pa = PTE2PA(*pte);
       kfree((void*)pa);
@@ -208,7 +230,7 @@ uvmunmap(pagetable_t pagetable, uint64 va, uint64 npages, int do_free)
 // create an empty user page table.
 // returns 0 if out of memory.
 pagetable_t
-uvmcreate()
+upagecreate()
 {
   pagetable_t pagetable;
   pagetable = (pagetable_t) kalloc();
@@ -222,7 +244,7 @@ uvmcreate()
 // need not be page aligned. 
 // Returns allocated page number or -1 on error.
 int
-uvmalloc(pagetable_t pagetable, uint64 old_addr, uint64 new_addr)
+uvmalloc(struct proc *p, uint64 old_addr, uint64 new_addr)
 {
   old_addr = PGROUNDDOWN(old_addr);
   new_addr = PGROUNDUP(new_addr);
@@ -230,73 +252,96 @@ uvmalloc(pagetable_t pagetable, uint64 old_addr, uint64 new_addr)
     return 0;
 
   int ret = 0;
+  int kret = 0;
   char *mem;
   for(uint64 a = old_addr; a < new_addr; a += PGSIZE){
     mem = kalloc();
-    if(mem == 0){
-      uvmunmap(pagetable, old_addr, ret, 1);
-      return -1;
-    }
+    if(mem == 0)
+      goto err;
     memset(mem, 0, PGSIZE);
-    int rc = map_onepage(pagetable, a, (uint64)mem, PTE_W|PTE_X|PTE_R|PTE_U);
+
+    int rc = map_onepage(p->pagetable, a, (uint64)mem, PTE_W|PTE_X|PTE_R|PTE_U);
     if (rc == -1) {
-      kfree(mem);
-      uvmunmap(pagetable, old_addr, ret, 1);
-      return -1;
+      goto err;
     } else if (rc == -2) {
-      kfree(mem);
     } else {
       ret += 1;
     }
+    rc = map_onepage(p->kpagetable, a, (uint64)mem, PTE_W|PTE_X|PTE_R);
+    if (rc == -1) {
+      goto err;
+    } else if (rc == -2) {
+    } else {
+      kret += 1;
+    }
   }
+  if (ret != kret) 
+    panic("uvmalloc: ret != kret");
   return ret;
+err:
+  if (mem)
+    kfree(mem);
+  upageunmap(p->pagetable, old_addr, ret, 1);
+  upageunmap(p->kpagetable, old_addr, kret, 0);
+  return -1;
 }
 
 // Deallocate user pages to bring the process size from old_addr to
 // new_addr. oldsz and newsz need not be page-aligned.
 // Returns deallocated page number or -1 on error. 
 int
-uvmdealloc(pagetable_t pagetable, uint64 old_addr, uint64 new_addr)
+uvmdealloc(struct proc *p, uint64 old_addr, uint64 new_addr)
 {
   if(PGROUNDUP(new_addr) >= PGROUNDUP(old_addr))
     return 0;
 
   int npages = (PGROUNDUP(old_addr) - PGROUNDUP(new_addr)) / PGSIZE;
-  uvmunmap(pagetable, PGROUNDUP(new_addr), npages, 1);
+  upageunmap(p->pagetable, PGROUNDUP(new_addr), npages, 1);
+  upageunmap(p->kpagetable, PGROUNDUP(new_addr), npages, 0);
   return npages;
 }
 
-// Recursively free page-table pages.
-// All leaf mappings must already have been removed.
 void
-freewalk(pagetable_t pagetable)
+free_pagetable_impl(pagetable_t pagetable, int assert_noleaf, int freeleaf)
 {
+  if (!pagetable) return;
   // there are 2^9 = 512 PTEs in a page table.
   for(int i = 0; i < 512; i++){
     pte_t pte = pagetable[i];
-    if((pte & PTE_V) && (pte & (PTE_R|PTE_W|PTE_X)) == 0){
-      // this PTE points to a lower-level page table.
+    if(pte & PTE_V){
       uint64 child = PTE2PA(pte);
-      freewalk((pagetable_t)child);
-      pagetable[i] = 0;
-    } else if(pte & PTE_V){
-      panic("freewalk: leaf");
-    }
+      if ((pte & (PTE_R|PTE_W|PTE_X)) != 0) { // next is leaf
+        if (assert_noleaf) {
+          panic("free_pagetable: leaf");
+        }
+        if (freeleaf) {
+          kfree((void *)child);
+        }
+      } else { // not leaf
+        // this pte points to a lower-level page table.
+        free_pagetable_impl((pagetable_t)child, assert_noleaf, freeleaf);
+        pagetable[i] = 0;
+      }
+    } 
   }
   kfree((void*)pagetable);
 }
 
-// Free user memory pages,
-// then free page-table pages.
+// Recursively free page-table pages.
+// All leaf mappings must already have been removed if assert_noleaf is set.
 void
-uvmfree(struct proc *p)
+free_pagetable_pages(pagetable_t pagetable, int assert_noleaf)
 {
-  uvmunmap(p->pagetable, PROC_CODE_BASE(p), PROC_CODE_PAGES(p), 1);
-  uvmunmap(p->pagetable, PROC_STACK_BASE(p), PROC_STACK_PAGES(p), 1);
-  uvmunmap(p->pagetable, PROC_HEAP_BASE(p), PROC_HEAP_PAGES(p), 1);
-  if (p->pagetable)
-    freewalk(p->pagetable);
+  free_pagetable_impl(pagetable, assert_noleaf, 0);
 }
+
+// Free a page-table and its mapped memory
+void
+free_pagetable_all(pagetable_t pagetable)
+{
+  free_pagetable_impl(pagetable, 0, 1);
+}
+
 
 // Given a parent process's page table, copy
 // its memory into a child's page table.
@@ -331,34 +376,43 @@ uvmcopy(struct proc *father, struct proc *child)
         kfree(mem);
         goto err;
       }
+      if(mappages(child->kpagetable, i, PGSIZE, (uint64)mem, flags) != 0){
+        kfree(mem);
+        goto err;
+      }
     }
   }
   return 0;
 
  err:
-  if (idx > 0)
-    uvmunmap(child->pagetable, start_addrs[0], (end_addrs[0] - start_addrs[0]) / PGSIZE, 1);
-  if (idx > 1)
-    uvmunmap(child->pagetable, start_addrs[1], (end_addrs[1] - start_addrs[1]) / PGSIZE, 1);
-  uvmunmap(child->pagetable, start_addrs[idx], (i - start_addrs[1]) / PGSIZE, 1);
+  if (idx > 0) {
+    upageunmap(child->pagetable, start_addrs[0], (end_addrs[0] - start_addrs[0]) / PGSIZE, 1);
+    upageunmap(child->kpagetable, start_addrs[0], (end_addrs[0] - start_addrs[0]) / PGSIZE, 0);
+  }
+  if (idx > 1) {
+    upageunmap(child->pagetable, start_addrs[1], (end_addrs[1] - start_addrs[1]) / PGSIZE, 1);
+    upageunmap(child->kpagetable, start_addrs[1], (end_addrs[1] - start_addrs[1]) / PGSIZE, 0);
+  }
+  upageunmap(child->pagetable, start_addrs[idx], (i - start_addrs[1]) / PGSIZE, 1);
+  upageunmap(child->kpagetable, start_addrs[idx], (i - start_addrs[1]) / PGSIZE, 0);
   return -1;
 }
 
 // mark a PTE invalid for user access.
 // used by exec for the user stack guard page.
 void
-uvmclear(pagetable_t pagetable, uint64 va)
+upageclear(pagetable_t pagetable, uint64 va)
 {
   pte_t *pte;
   
   pte = walk(pagetable, va, 0);
   if(pte == 0)
-    panic("uvmclear");
+    panic("upageclear");
   *pte &= ~PTE_U;
 }
 
 int 
-uvmvalid(struct proc *p, uint64 va) 
+uaddrvalid(struct proc *p, uint64 va) 
 {
   return 1;
 }
@@ -523,6 +577,38 @@ _vmprint(pagetable_t pagetable, int level){
  */
 void
 vmprint(pagetable_t pagetable){
+  if (!pagetable)
+    return;
   printf("page table %p\n", pagetable);
   _vmprint(pagetable, 1);
+}
+
+static void 
+_page_info(pagetable_t pagetable, int *cnt, int *size)
+{
+  if (!pagetable) return;
+  // there are 2^9 = 512 PTEs in a page table.
+  for(int i = 0; i < 512; i++){
+    pte_t pte = pagetable[i];
+    if(pte & PTE_V){
+      uint64 child = PTE2PA(pte);
+      if ((pte & (PTE_R|PTE_W|PTE_X)) != 0) { // next is leaf
+        *cnt += 1;
+      } else { // not leaf
+        // this pte points to a lower-level page table.
+        _page_info((pagetable_t)child, cnt, size);
+      }
+    } 
+  }
+  *size += PGSIZE;
+}
+
+void
+print_page_info(pagetable_t pagetable) 
+{
+  if (!pagetable)
+    return;
+  int ret = 0, size = 0;
+  _page_info(pagetable, &ret, &size);
+  printf("mapped pages: %d, occupy space: %d kb\n", ret, size/1024);
 }

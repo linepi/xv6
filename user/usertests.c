@@ -2887,8 +2887,8 @@ main(int argc, char *argv[])
   printf("usertests starting\n");
   int free0 = 0;
   int free1 = 0;
-  free0 = countfree();
-  printf("start free pages: %d\n", free0);
+  // free0 = countfree();
+  // printf("start free pages: %d\n", free0);
   int fail = 0;
   for (struct test *t = tests; t->s != 0; t++) {
     int torun = 0;
@@ -2904,8 +2904,8 @@ main(int argc, char *argv[])
     if(torun && !run(t->f, t->s))
       fail = 1;
   }
-  free1 = countfree();
-  printf("end free pages: %d\n", free1);
+  // free1 = countfree();
+  // printf("end free pages: %d\n", free1);
 
   if(fail){
     printf("SOME TESTS FAILED\n");

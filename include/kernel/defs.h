@@ -89,10 +89,9 @@ int             fork(void);
 int             growproc(int);
 void            proc_mapstacks(pagetable_t);
 pagetable_t     proc_pagetable(struct proc *);
-void            proc_freepagetable(struct proc *);
+pagetable_t     proc_kpagetable(struct proc *);
 int             kill(int);
 struct cpu*     mycpu(void);
-struct cpu*     getmycpu(void);
 struct proc*    myproc();
 void            procinit(void);
 void            scheduler(void) __attribute__((noreturn));
@@ -106,7 +105,8 @@ int             either_copyout(int user_dst, uint64 dst, void *src, uint64 len);
 int             either_copyin(void *dst, int user_src, uint64 src, uint64 len);
 void            procdump(void);
 int 						proc_rand(struct proc *p);
-uint64 					proc_gen_heap_top(struct proc *p); 
+void            proc_free_pagetable(struct proc *p);
+void            proc_free_kpagetable(struct proc *p, uint64);
 
 // swtch.S
 void            swtch(struct context*, struct context*);
@@ -162,27 +162,36 @@ void            uartputc_sync(int);
 int             uartgetc(void);
 
 // vm.c
+pagetable_t			kvmmake(void);
 void            kvminit(void);
 void            kvminithart(void);
 void            kvmmap(pagetable_t, uint64, uint64, uint64, int);
+
 int             mappages(pagetable_t, uint64, uint64, uint64, int);
 int							map_onepage(pagetable_t, uint64, uint64, int);
-pagetable_t     uvmcreate(void);
-int             uvmalloc(pagetable_t, uint64, uint64);
-int             uvmdealloc(pagetable_t, uint64, uint64);
+pagetable_t     upagecreate(void);
+void            upageunmap(pagetable_t, uint64, uint64, int);
+void            upageclear(pagetable_t, uint64);
+
+int             uvmalloc(struct proc *, uint64, uint64);
+int             uvmdealloc(struct proc *, uint64, uint64);
 int             uvmcopy(struct proc *, struct proc *);
-int             uvmvalid(struct proc *, uint64);
-void            uvmfree(struct proc *);
-void            uvmunmap(pagetable_t, uint64, uint64, int);
-void            uvmclear(pagetable_t, uint64);
+int             uaddrvalid(struct proc *, uint64);
+
+uint64  				vmpa(pagetable_t pagetable, uint64 va);
+uint64          kvmpa(uint64 va);
 uint64          walkaddr(pagetable_t, uint64);
 pte_t *         walk(pagetable_t pagetable, uint64 va, int alloc);
+void            free_pagetable_pages(pagetable_t pagetable, int);
+void            free_pagetable_all(pagetable_t pagetable);
+
 int             copyout(pagetable_t, uint64, char *, uint64);
 int             copyin(pagetable_t, char *, uint64, uint64);
 int             copyinstr(pagetable_t, char *, uint64, uint64);
+
 void            vmprint(pagetable_t);
 void						xprint(pagetable_t pagetable, uint64 srcva, uint64 bytes);
-void            freewalk(pagetable_t pagetable);
+void 						print_page_info(pagetable_t pagetable);
 
 // plic.c
 void            plicinit(void);

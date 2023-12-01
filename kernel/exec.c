@@ -7,7 +7,7 @@
 #include "kernel/defs.h"
 #include "kernel/elf.h"
 
-static int loadseg(pde_t *pgdir, uint64 addr, struct inode *ip, uint offset, uint sz);
+static int loadseg(pagetable_t pagetable, uint64 va, struct inode *ip, uint offset, uint sz);
 
 int
 exec(char *path, char **argv)
@@ -22,6 +22,8 @@ exec(char *path, char **argv)
   struct proc *p = myproc();
   struct proc p_bak = *p;
   struct proc p_new = *p;
+  p_new.pagetable = 0;
+  p_new.kpagetable = 0;
   addrinfo_clear(p_new.addrinfo);
 
   begin_op();
@@ -40,6 +42,8 @@ exec(char *path, char **argv)
 
   if((p_new.pagetable = proc_pagetable(p)) == 0)
     goto bad;
+  if((p_new.kpagetable = proc_kpagetable(p)) == 0)
+    goto bad;
 
   // Load program into memory.
   for(i=0, off=elf.phoff; i<elf.phnum; i++, off+=sizeof(ph)){
@@ -52,7 +56,7 @@ exec(char *path, char **argv)
     if(ph.vaddr + ph.memsz < ph.vaddr)
       goto bad;
     p_new.addrinfo.vm_offset = ph.vaddr;
-    if((uvmalloc(p_new.pagetable, 
+    if((uvmalloc(&p_new, 
           p_new.addrinfo.program_sz + p_new.addrinfo.vm_offset, 
           p_new.addrinfo.program_sz + p_new.addrinfo.vm_offset + ph.memsz
         )) == -1)
@@ -67,9 +71,9 @@ exec(char *path, char **argv)
 
   // Allocate two pages at the next page boundary.
   // Use the second as the user stack.
-  sp = proc_gen_heap_top(p);
+  sp = STACK_TOP(p);
   stackbase = sp - PGSIZE;
-  if((uvmalloc(p_new.pagetable, stackbase, sp)) == -1)
+  if((uvmalloc(&p_new, stackbase, sp)) == -1)
     goto bad;
   p_new.addrinfo.stack_top = sp;
   p_new.addrinfo.stack_bottom = stackbase;
@@ -107,19 +111,20 @@ exec(char *path, char **argv)
       last = s+1;
   safestrcpy(p_new.name, last, sizeof(p_new.name));
     
-  proc_freepagetable(&p_bak);
+  proc_free_pagetable(&p_bak);
+  proc_free_kpagetable(&p_bak, MAKE_SATP(p_new.kpagetable));
   // Commit to the user image.
   p_new.trapframe->epc = elf.entry;  // initial program counter = main
   p_new.trapframe->sp = sp; // initial stack pointer
-  p_new.addrinfo.heap_start = PROC_CODE_END(&p_new);
-  p_new.addrinfo.heap_end = PROC_CODE_END(&p_new);
+  p_new.addrinfo.heap_start = HEAP_START(p);
+  p_new.addrinfo.heap_end = p_new.addrinfo.heap_start;
   *p = p_new;
 
   return argc; // this ends up in a0, the first argument to main(argc, argv)
 
  bad:
-  if (p_new.pagetable)
-    proc_freepagetable(&p_new);
+  proc_free_pagetable(&p_new);
+  proc_free_kpagetable(&p_new, 0);
   if(ip){
     iunlockput(ip);
     end_op();

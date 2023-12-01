@@ -12,7 +12,7 @@ int
 fetchaddr(uint64 addr, uint64 *ip)
 {
   struct proc *p = myproc();
-  if(!uvmvalid(p, addr))
+  if(!uaddrvalid(p, addr))
     return -1;
   if(copyin(p->pagetable, (char *)ip, addr, sizeof(*ip)) != 0)
     return -1;
@@ -25,7 +25,7 @@ int
 fetchstr(uint64 addr, char *buf, int max)
 {
   struct proc *p = myproc();
-  if(!uvmvalid(p, addr))
+  if(!uaddrvalid(p, addr))
     return -1;
   int err = copyinstr(p->pagetable, buf, addr, max);
   if(err < 0)
