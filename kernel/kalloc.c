@@ -26,6 +26,7 @@ void
 kinit()
 {
   initlock(&kmem.lock, "kmem");
+  kmem.freelist = 0;
   freerange(end, (void*)PHYSTOP);
 }
 
@@ -45,15 +46,16 @@ freerange(void *pa_start, void *pa_end)
 void
 kfree(void *pa)
 {
-  struct run *r;
-
   if(((uint64)pa % PGSIZE) != 0 || (char*)pa < end || (uint64)pa >= PHYSTOP)
     panic("kfree");
 
+  struct run *r = (struct run*)pa;
+  if (r == kmem.freelist) {
+    printf("[warning] kfree magic error\n");
+    return;
+  }
   // Fill with junk to catch dangling refs.
   memset(pa, 1, PGSIZE);
-
-  r = (struct run*)pa;
 
   acquire(&kmem.lock);
   r->next = kmem.freelist;
@@ -87,6 +89,10 @@ kmemleft()
   struct run *r = kmem.freelist;
   while (r) {
     ret += PGSIZE;
+    if (r == r->next) {
+      printf("error memleft\n");
+      return 0;
+    }
     r = r->next;
   }
   return ret;

@@ -10,6 +10,8 @@ struct cpu cpus[NCPU];
 
 struct proc proc[NPROC];
 
+struct kpagetable_wrapper kpagetable_pool[NPROC / 2];
+
 struct proc *initproc;
 
 int nextpid = 1;
@@ -39,6 +41,12 @@ procinit(void)
     p->kstackbase = KSTACK((int) (p - proc));
     // this page is for kernel stack, which will not be freed while OS running.
     p->kstackpage = kalloc();
+  }
+
+  for(int i = 0; i < NELEM(kpagetable_pool); i++) {
+    struct kpagetable_wrapper *kpw = &kpagetable_pool[i];
+    kpw->occupied = 0;
+    kpw->page = uclean_kpagetable();
   }
 }
 
@@ -209,6 +217,39 @@ extern char etext[];  // kernel.ld sets this to end of kernel code.
 pagetable_t
 proc_kpagetable(struct proc *p)
 {
+  struct kpagetable_wrapper *kpw;
+  int i;
+  for (i = 0; i < NELEM(kpagetable_pool); i++) {
+    if (!kpagetable_pool[i].occupied) {
+      kpw = &kpagetable_pool[i];
+      break;
+    }
+  }
+  if (i == NELEM(kpagetable_pool)) // not found
+    return 0;
+  
+  // map the trapframe just below TRAMPOLINE, for trampoline.S.
+  if(mappages(kpw->page, TRAPFRAME, PGSIZE, (uint64)(p->trapframe), PTE_R | PTE_W) < 0){
+    goto bad;
+  }
+  if(mappages(kpw->page, USYSCALL, PGSIZE, (uint64)(p->usyscall), PTE_R) < 0){
+    upageunmap(kpw->page, TRAPFRAME, 1, 0);
+    goto bad;
+  }
+  if(mappages(kpw->page, p->kstackbase, PGSIZE, (uint64)p->kstackpage, PTE_R | PTE_W) < 0){
+    upageunmap(kpw->page, TRAPFRAME, 1, 0);
+    upageunmap(kpw->page, USYSCALL, 1, 0);
+    goto bad;
+  }
+  kpw->occupied = 1;
+  return kpw->page;
+bad:
+  return 0;
+}
+
+pagetable_t 
+uclean_kpagetable()
+{
   pagetable_t kpgtbl;
 
   kpgtbl = (pagetable_t) kalloc();
@@ -241,17 +282,6 @@ proc_kpagetable(struct proc *p)
   if (mappages(kpgtbl, TRAMPOLINE, PGSIZE, (uint64)trampoline, PTE_R | PTE_X) != 0) {
     goto bad;
   }
-
-  // map the trapframe just below TRAMPOLINE, for trampoline.S.
-  if(mappages(kpgtbl, TRAPFRAME, PGSIZE, (uint64)(p->trapframe), PTE_R | PTE_W) < 0){
-    goto bad;
-  }
-  if(mappages(kpgtbl, USYSCALL, PGSIZE, (uint64)(p->usyscall), PTE_R) < 0){
-    goto bad;
-  }
-  if(mappages(kpgtbl, p->kstackbase, PGSIZE, (uint64)p->kstackpage, PTE_R | PTE_W) < 0){
-    goto bad;
-  }
   return kpgtbl;
 bad:
   // free kpgtbl
@@ -281,7 +311,21 @@ proc_free_kpagetable(struct proc *p, uint64 satp)
     w_satp(satp);
     sfence_vma();
   }
-  free_pagetable_pages(p->kpagetable, 0);
+  upageunmap(p->kpagetable, PROC_CODE_BASE(p), PROC_CODE_PAGES(p), 0);
+  upageunmap(p->kpagetable, PROC_STACK_BASE(p), PROC_STACK_PAGES(p), 0);
+  upageunmap(p->kpagetable, PROC_HEAP_BASE(p), PROC_HEAP_PAGES(p), 0);
+  upageunmap(p->kpagetable, TRAPFRAME, 1, 0);
+  upageunmap(p->kpagetable, USYSCALL, 1, 0);
+  upageunmap(p->kpagetable, p->kstackbase, 1, 0);
+  int i;
+  for (i = 0; i < NELEM(kpagetable_pool); i++) {
+    if (kpagetable_pool[i].page == p->kpagetable) {
+      kpagetable_pool[i].occupied = 0;
+      break;
+    }
+  }
+  if (i == NELEM(kpagetable_pool))
+    panic("can not find [kpagetable wrapper] while free kpagetable");
   p->kpagetable = 0;
 }
 

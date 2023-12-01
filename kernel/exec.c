@@ -55,12 +55,12 @@ exec(char *path, char **argv)
       goto bad;
     if(ph.vaddr + ph.memsz < ph.vaddr)
       goto bad;
-    p_new.addrinfo.vm_offset = ph.vaddr;
-    if((uvmalloc(&p_new, 
-          p_new.addrinfo.program_sz + p_new.addrinfo.vm_offset, 
-          p_new.addrinfo.program_sz + p_new.addrinfo.vm_offset + ph.memsz
+   if((uvmalloc(&p_new, 
+          p_new.addrinfo.program_sz + ph.vaddr, 
+          p_new.addrinfo.program_sz + ph.vaddr + ph.memsz
         )) == -1)
       goto bad;
+    p_new.addrinfo.vm_offset = ph.vaddr;
     p_new.addrinfo.program_sz += ph.memsz;
     if(loadseg(p_new.pagetable, p_new.addrinfo.vm_offset, ip, ph.off, ph.filesz) < 0)
       goto bad;

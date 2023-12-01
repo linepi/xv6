@@ -64,6 +64,7 @@ void            ramdiskrw(struct buf*);
 void*           kalloc(void);
 void            kfree(void *);
 void            kinit(void);
+int 						kmemleft();
 
 // log.c
 void            initlog(int, struct superblock*);
@@ -90,6 +91,7 @@ int             growproc(int);
 void            proc_mapstacks(pagetable_t);
 pagetable_t     proc_pagetable(struct proc *);
 pagetable_t     proc_kpagetable(struct proc *);
+pagetable_t     uclean_kpagetable();
 int             kill(int);
 struct cpu*     mycpu(void);
 struct proc*    myproc();

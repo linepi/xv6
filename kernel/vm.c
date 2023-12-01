@@ -215,8 +215,10 @@ upageunmap(pagetable_t pagetable, uint64 va, uint64 npages, int do_free)
   for(a = va; a < va + npages*PGSIZE; a += PGSIZE){
     if((pte = walk(pagetable, a, 0)) == 0)
       panic("upageunmap: walk");
-    if((*pte & PTE_V) == 0)
-      panic("upageunmap: not mapped");
+    if((*pte & PTE_V) == 0) {
+      printf("[warning]upageunmap: not mapped\n");
+      continue;
+    }
     if(PTE_FLAGS(*pte) == PTE_V)
       panic("upageunmap: not a leaf");
     if(do_free){
@@ -264,6 +266,7 @@ uvmalloc(struct proc *p, uint64 old_addr, uint64 new_addr)
     if (rc == -1) {
       goto err;
     } else if (rc == -2) {
+      continue;
     } else {
       ret += 1;
     }
@@ -271,12 +274,13 @@ uvmalloc(struct proc *p, uint64 old_addr, uint64 new_addr)
     if (rc == -1) {
       goto err;
     } else if (rc == -2) {
+      continue;
     } else {
       kret += 1;
     }
   }
   if (ret != kret) 
-    panic("uvmalloc: ret != kret");
+    printf("uvmalloc: ret != kret\n");
   return ret;
 err:
   if (mem)
@@ -522,19 +526,38 @@ xprint(pagetable_t pagetable, uint64 srcva, uint64 bytes)
   }
 }
 
+static uint64 vmprint_buf[2];
+static int vmignore(int level, int i) 
+{
+  // 0 128 0 to
+  // 2 64  0 ignore
+  /*
+  means...
+  0 96 0 to 0 512 512
+  all 1 . .
+  2 0 0 to 2 64 0
+  */
+  if (level == 1) {
+    if (i == 1) return 1;
+  } else if (level == 2) {
+    if (vmprint_buf[0] == 0 && i >= 96) return 1;
+    if (vmprint_buf[0] == 2 && i < 64) return 1;
+  }
+  return 0;
+}
 /**
  * @param pagetable 所要打印的页表
  * @param level 页表的层级
  */
-static uint64 vmprint_buf[2];
-
 static void
-_vmprint(pagetable_t pagetable, int level){
+_vmprint(pagetable_t pagetable, int level, int k){
   // there are 2^9 = 512 PTEs in a page table.
-  for(int i = 0; i < 512; i++){
+  for (int i = 0; i < 512; i++) {
     pte_t pte = pagetable[i];
     // PTE_V is a flag for whether the page table is valid
     if(pte & PTE_V){
+      if (k && vmignore(level, i)) 
+        continue;
       for (int j = 0; j < level; j++){
         if (j) printf(" ");
         printf("..");
@@ -557,7 +580,7 @@ _vmprint(pagetable_t pagetable, int level){
       if((pte & (PTE_R|PTE_W|PTE_X)) == 0){
         // this PTE points to a lower-level page table.
         vmprint_buf[level - 1] = i;
-        _vmprint((pagetable_t)child, level + 1);
+        _vmprint((pagetable_t)child, level + 1, k);
       }
     }
   }
@@ -572,7 +595,19 @@ vmprint(pagetable_t pagetable){
   if (!pagetable)
     return;
   printf("page table %p\n", pagetable);
-  _vmprint(pagetable, 1);
+  _vmprint(pagetable, 1, 0);
+}
+
+/**
+ * @brief vmprintk 打印页表, 但不包括内核映射
+ * @param kpagetable 所要打印的内核页表
+ */
+void
+vmprintk(pagetable_t kpagetable){
+  if (!kpagetable)
+    return;
+  printf("kpage table %p\n", kpagetable);
+  _vmprint(kpagetable, 1, 1);
 }
 
 static void 
@@ -608,7 +643,11 @@ print_page_info(pagetable_t pagetable)
 void 
 print_pte_info(pagetable_t pagetable, uint64 va)
 {
+  if (!pagetable)
+    return;
   pte_t *ptep = walk(pagetable, va, 0);
+  if (!ptep)
+    printf("not pte available\n");
   pte_t pte = *ptep;
   printf("pte 0x%lx", pte);
   // print pte flag

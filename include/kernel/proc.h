@@ -98,6 +98,11 @@ struct addrinfo {
   uint64 program_sz;         // program code bytes
 };
 
+struct kpagetable_wrapper {
+  pagetable_t page;
+  int occupied;
+};
+
 #define addrinfo_clear(addrinfo) do { \
   addrinfo.stack_top = 0; \
   addrinfo.stack_bottom = 0; \

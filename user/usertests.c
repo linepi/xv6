@@ -2149,14 +2149,12 @@ sbrkmuch(char *s)
 {
   enum { BIG=100*1024*1024 };
   char *c, *oldbrk, *a, *lastaddr, *p;
-  uint64 amt;
 
   oldbrk = sbrk(0);
 
   // can one grow address space to something big?
   a = sbrk(0);
-  amt = BIG - (uint64)a;
-  p = sbrk(amt);
+  p = sbrk(BIG);
   if (p != a) {
     printf("%s: sbrk test failed to grow big address space; enough phys mem?\n", s);
     exit(1);
@@ -2167,7 +2165,7 @@ sbrkmuch(char *s)
   for(char *pp = a; pp < eee; pp += 4096)
     *pp = 1;
 
-  lastaddr = (char*) (BIG-1);
+  lastaddr = (char*)(sbrk(0)-1);
   *lastaddr = 99;
 
   // can one de-allocate?
@@ -2794,6 +2792,14 @@ main(int argc, char *argv[])
   char *from = 0;
   int from_start = 0;
 
+  int count_free = 0;
+  for (int i = 0; i < argc; i++) {
+    if (strcmp(argv[i], "--count-free") == 0) {
+      count_free = 1;
+      break;
+    }
+  }
+
   if(argc == 3 && strcmp(argv[1], "--from") == 0){
     from = argv[2];
     printf("Test from %s\n", from);
@@ -2877,8 +2883,10 @@ main(int argc, char *argv[])
   int start = uptime();
   int free0 = 0;
   int free1 = 0;
-  free0 = countfree();
-  printf("start free pages: %d\n", free0);
+  if (count_free) {
+    free0 = countfree();
+    printf("start free pages: %d\n", free0);
+  }
   int fail = 0;
   for (struct test *t = tests; t->s != 0; t++) {
     int torun = 0;
@@ -2894,8 +2902,10 @@ main(int argc, char *argv[])
     if(torun && !run(t->f, t->s))
       fail = 1;
   }
-  free1 = countfree();
-  printf("end free pages: %d\n", free1);
+  if (count_free) {
+    free1 = countfree();
+    printf("end free pages: %d\n", free1);
+  }
   int end = uptime();
   printf("consume %d time\n", end - start);
 
