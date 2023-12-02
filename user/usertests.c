@@ -2657,6 +2657,50 @@ badarg(char *s)
   exit(0);
 }
 
+void 
+ugetpidtest()
+{
+  for (int i = 0; i < 64; i++) {
+    int ret = fork();
+    if (ret == 0) {
+      wait(&ret);
+      if (ret != 0)
+        exit(1);
+      continue;
+    }
+    if (getpid() != ugetpid()) {
+      printf("missmatched PID\n");
+      exit(1);
+    }
+    exit(0);
+  }
+}
+
+void 
+pgaccesstest()
+{
+  char *buf;
+  unsigned int abits;
+  buf = malloc(32 * PGSIZE);
+  if (pgaccess(buf, 32, &abits) < 0) {
+    printf("pgaccess failed\n");
+    exit(1);
+  }
+
+  buf[PGSIZE * 1] += 1;
+  buf[PGSIZE * 2] += 1;
+  buf[PGSIZE * 30] += 1;
+  if (pgaccess(buf, 32, &abits) < 0) {
+    printf("pgaccess failed\n");
+    exit(1);
+  }
+  if (abits != ((1 << 1) | (1 << 2) | (1 << 30))) {
+    printf("incorrect access bits set\n");
+    exit(1);
+  }
+  free(buf);
+}
+
 // test the exec() code that cleans up if it runs out
 // of memory. it's really a test that such a condition
 // doesn't cause a panic.
@@ -2829,7 +2873,6 @@ main(int argc, char *argv[])
     {reparent2, "reparent2"},
     {pgbug, "pgbug" },
     {sbrkbugs, "sbrkbugs" },
-    // {badwrite, "badwrite" },
     {badarg, "badarg" },
     {reparent, "reparent" },
     {twochildren, "twochildren"},
@@ -2859,7 +2902,6 @@ main(int argc, char *argv[])
     {stacktest, "stacktest"},
     {opentest, "opentest"},
     {writetest, "writetest"},
-    // {writebig, "writebig"},
     {createtest, "createtest"},
     {openiputtest, "openiput"},
     {exitiputtest, "exitiput"},
@@ -2876,6 +2918,10 @@ main(int argc, char *argv[])
     {iref, "iref"},
     {forktest, "forktest"},
     {bigdir, "bigdir"}, // slow
+    {ugetpidtest, "ugetpid"}, 
+    {pgaccesstest, "pgaccesstest"}, 
+    // {badwrite, "badwrite" },
+    // {writebig, "writebig"},
     { 0, 0},
   };
 

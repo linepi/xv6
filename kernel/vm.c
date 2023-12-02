@@ -404,8 +404,8 @@ uvmcopy(struct proc *father, struct proc *child)
     upageunmap(child->pagetable, start_addrs[1], (end_addrs[1] - start_addrs[1]) / PGSIZE, 1);
     upageunmap(child->kpagetable, start_addrs[1], (end_addrs[1] - start_addrs[1]) / PGSIZE, 0);
   }
-  upageunmap(child->pagetable, start_addrs[idx], (i - start_addrs[1]) / PGSIZE, 1);
-  upageunmap(child->kpagetable, start_addrs[idx], (i - start_addrs[1]) / PGSIZE, 0);
+  upageunmap(child->pagetable, start_addrs[idx], (i - start_addrs[idx]) / PGSIZE, 1);
+  upageunmap(child->kpagetable, start_addrs[idx], (i - start_addrs[idx]) / PGSIZE, 0);
   return -1;
 }
 
