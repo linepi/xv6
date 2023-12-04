@@ -165,6 +165,13 @@ panic(char *s)
 }
 
 void
+assert(int condition)
+{
+  if (!condition)
+    panic("assert");
+}
+
+void
 printfinit(void)
 {
   initlock(&pr.lock, "pr");

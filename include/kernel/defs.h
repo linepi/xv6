@@ -65,6 +65,10 @@ void*           kalloc(void);
 void            kfree(void *);
 void            kinit(void);
 int 						kmemleft();
+int             inc_page_ref(uint64 addr, int cnt);
+int             chg_page_ref(uint64 addr, int to);
+void 						acquire_page_ref();
+void						release_page_ref();
 
 // log.c
 void            initlog(int, struct superblock*);
@@ -81,6 +85,7 @@ int             pipewrite(struct pipe*, uint64, int);
 // printf.c
 void            printf(char*, ...);
 void            panic(char*) __attribute__((noreturn));
+void            assert(int);
 void            printfinit(void);
 void            backtrace(void);
 
@@ -177,6 +182,7 @@ void            upageunmap(pagetable_t, uint64, uint64, int);
 void            upageclear(pagetable_t, uint64);
 
 int             uvmalloc(struct proc *, uint64, uint64);
+int             uvmrealloc(struct proc *, uint64);
 int             uvmdealloc(struct proc *, uint64, uint64);
 int             uvmcopy(struct proc *, struct proc *);
 int             uaddrvalid(struct proc *, uint64);
@@ -185,8 +191,7 @@ uint64  				vmpa(pagetable_t pagetable, uint64 va);
 uint64          kvmpa(uint64 va);
 uint64          walkaddr(pagetable_t, uint64);
 pte_t *         walk(pagetable_t pagetable, uint64 va, int alloc);
-void            free_pagetable_pages(pagetable_t pagetable, int);
-void            free_pagetable_all(pagetable_t pagetable);
+int             free_pagetable(pagetable_t pagetable, int);
 
 int             copyout(pagetable_t, uint64, char *, uint64);
 int             copyin(char *, uint64, uint64);
@@ -207,5 +212,12 @@ void            virtio_disk_init(void);
 void            virtio_disk_rw(struct buf *, int);
 void            virtio_disk_intr(void);
 
+// others
+void sysinfo_dump();
+
 // number of elements in fixed-size array
 #define NELEM(x) (sizeof(x)/sizeof((x)[0]))
+
+#define PGTBLFREE_MUST_NOLEAF 1
+#define PGTBLFREE_FREE_MEM 2
+#define PGTBLFREE_JUST_NO_LEAF 4

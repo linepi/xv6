@@ -50,8 +50,7 @@ usertrap(void)
   // save user program counter.
   p->trapframe->epc = r_sepc();
   
-  if(r_scause() == 8){
-    // system call
+  if(r_scause() == 8){ // system call
 
     if(p->killed)
       exit(-1);
@@ -65,6 +64,10 @@ usertrap(void)
     intr_on();
 
     syscall();
+  } else if (r_scause() == 15 && uaddrvalid(p, r_stval())) { // store page fault, this is copy on write
+    if (uvmrealloc(p, PGROUNDDOWN(r_stval())) != 0) {
+      p->killed = 1;
+    }
   } else if((which_dev = devintr()) != 0){
     // ok
   } else {
@@ -137,13 +140,18 @@ kerneltrap()
   uint64 sepc = r_sepc();
   uint64 sstatus = r_sstatus();
   uint64 scause = r_scause();
+  struct proc *p = myproc();
   
   if((sstatus & SSTATUS_SPP) == 0)
     panic("kerneltrap: not from supervisor mode");
   if(intr_get() != 0)
     panic("kerneltrap: interrupts enabled");
 
-  if((which_dev = devintr()) == 0){
+  if (scause == 15 && uaddrvalid(p, r_stval())) {
+    if (uvmrealloc(p, PGROUNDDOWN(r_stval())) != 0) {
+      p->killed = 1;
+    }
+  } else if((which_dev = devintr()) == 0){
     printf("scause %p\n", scause);
     printf("sepc=%p stval=%p\n", r_sepc(), r_stval());
     panic("kerneltrap");

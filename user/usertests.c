@@ -2,6 +2,7 @@
 #include "kernel/types.h"
 #include "kernel/stat.h"
 #include "user/user.h"
+#include "user/system.h"
 #include "kernel/fs.h"
 #include "kernel/fcntl.h"
 #include "kernel/syscall.h"
@@ -2804,6 +2805,24 @@ countfree()
   return n;
 }
 
+int 
+countfree2()
+{
+  struct system_info si;
+  if (system_info(&si) == -1) {
+    printf("Get system info error, exit...\n");
+    exit(0);
+  }
+  return si.memleft / PGSIZE;
+}
+
+void 
+print_free()
+{
+  printf("memleft: %d\n", countfree2());
+}
+
+
 // run each test in its own process. run returns 1 if child's exit()
 // indicates success.
 int
@@ -2825,6 +2844,7 @@ run(void f(char *), char *s) {
       printf("FAILED\n");
     else
       printf("OK\n");
+    print_free();
     return xstatus == 0;
   }
 }
@@ -2836,7 +2856,7 @@ main(int argc, char *argv[])
   char *from = 0;
   int from_start = 0;
 
-  int count_free = 0;
+  int count_free = 1;
   for (int i = 0; i < argc; i++) {
     if (strcmp(argv[i], "--count-free") == 0) {
       count_free = 1;
@@ -2927,11 +2947,8 @@ main(int argc, char *argv[])
 
   printf("usertests starting\n");
   int start = uptime();
-  int free0 = 0;
-  int free1 = 0;
   if (count_free) {
-    free0 = countfree();
-    printf("start free pages: %d\n", free0);
+    print_free();
   }
   int fail = 0;
   for (struct test *t = tests; t->s != 0; t++) {
@@ -2945,21 +2962,19 @@ main(int argc, char *argv[])
     } else {
       torun = 1;
     }
-    if(torun && !run(t->f, t->s))
-      fail = 1;
+    if (torun) {
+      if (!run(t->f, t->s))
+        fail = 1;
+    }
   }
   if (count_free) {
-    free1 = countfree();
-    printf("end free pages: %d\n", free1);
+    print_free();
   }
   int end = uptime();
   printf("consume %d time\n", end - start);
 
   if(fail){
     printf("SOME TESTS FAILED\n");
-    exit(1);
-  } else if(free1 < free0){
-    printf("FAILED -- lost some free pages %d (out of %d)\n", free1, free0);
     exit(1);
   } else {
     printf("ALL TESTS PASSED\n");

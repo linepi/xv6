@@ -11,6 +11,7 @@ struct cpu cpus[NCPU];
 struct proc proc[NPROC];
 
 struct kpagetable_wrapper kpagetable_pool[NPROC / 2];
+struct spinlock kpool_lock;
 
 struct proc *initproc;
 
@@ -36,6 +37,7 @@ procinit(void)
   
   initlock(&pid_lock, "nextpid");
   initlock(&wait_lock, "wait_lock");
+  initlock(&kpool_lock, "kpool_lock");
   for(p = proc; p < &proc[NPROC]; p++) {
     initlock(&p->lock, "proc");
     p->kstackbase = KSTACK((int) (p - proc));
@@ -168,7 +170,6 @@ freeproc(struct proc *p)
   p->usyscall = 0;
   proc_free_pagetable(p);
   proc_free_kpagetable(p, 0);
-  p->pagetable = 0;
   p->pid = 0;
   p->parent = 0;
   p->name[0] = 0;
@@ -176,8 +177,7 @@ freeproc(struct proc *p)
   p->killed = 0;
   p->xstate = 0;
   p->state = UNUSED;
-  p->addrinfo.vm_offset = 0;
-  p->addrinfo.program_sz = 0;
+  addrinfo_clear(p->addrinfo);
 }
 
 // Create a user page table for a given process,
@@ -207,7 +207,7 @@ proc_pagetable(struct proc *p)
   return pagetable;
 bad:
   // free kpgtbl
-  free_pagetable_pages(pagetable, 0);
+  free_pagetable(pagetable, 0);
   return 0;
 }
 
@@ -218,6 +218,8 @@ pagetable_t
 proc_kpagetable(struct proc *p)
 {
   struct kpagetable_wrapper *kpw;
+
+  acquire(&kpool_lock);
   int i;
   for (i = 0; i < NELEM(kpagetable_pool); i++) {
     if (!kpagetable_pool[i].occupied) {
@@ -242,8 +244,10 @@ proc_kpagetable(struct proc *p)
     goto bad;
   }
   kpw->occupied = 1;
+  release(&kpool_lock);
   return kpw->page;
 bad:
+  release(&kpool_lock);
   return 0;
 }
 
@@ -285,7 +289,7 @@ uclean_kpagetable()
   return kpgtbl;
 bad:
   // free kpgtbl
-  free_pagetable_pages(kpgtbl, 0);
+  free_pagetable(kpgtbl, 0);
   return 0;
 }
 
@@ -298,7 +302,7 @@ proc_free_pagetable(struct proc *p)
   upageunmap(p->pagetable, PROC_CODE_BASE(p), PROC_CODE_PAGES(p), 1);
   upageunmap(p->pagetable, PROC_STACK_BASE(p), PROC_STACK_PAGES(p), 1);
   upageunmap(p->pagetable, PROC_HEAP_BASE(p), PROC_HEAP_PAGES(p), 1);
-  free_pagetable_pages(p->pagetable, 0);
+  free_pagetable(p->pagetable, 0);
   p->pagetable = 0;
 }
 
@@ -317,6 +321,9 @@ proc_free_kpagetable(struct proc *p, uint64 satp)
   upageunmap(p->kpagetable, TRAPFRAME, 1, 0);
   upageunmap(p->kpagetable, USYSCALL, 1, 0);
   upageunmap(p->kpagetable, p->kstackbase, 1, 0);
+  free_pagetable(p->kpagetable, PGTBLFREE_JUST_NO_LEAF);
+
+  acquire(&kpool_lock);
   int i;
   for (i = 0; i < NELEM(kpagetable_pool); i++) {
     if (kpagetable_pool[i].page == p->kpagetable) {
@@ -324,6 +331,8 @@ proc_free_kpagetable(struct proc *p, uint64 satp)
       break;
     }
   }
+  release(&kpool_lock);
+
   if (i == NELEM(kpagetable_pool))
     panic("can not find [kpagetable wrapper] while free kpagetable");
   p->kpagetable = 0;
@@ -362,6 +371,7 @@ userinit(void)
   memset(mem, 0, PGSIZE);
   mappages(p->pagetable, 0, PGSIZE, (uint64)mem, PTE_W|PTE_R|PTE_X|PTE_U);
   mappages(p->kpagetable, 0, PGSIZE, (uint64)mem, PTE_W|PTE_R|PTE_X);
+  chg_page_ref((uint64)mem, 2);
   memmove(mem, initcode, sizeof(initcode));
 
   p->addrinfo.vm_offset = 0;
@@ -788,6 +798,7 @@ procdump(void)
   char *state;
 
   printf("\n");
+  printf("pid state  name pages\n");
   for(p = proc; p < &proc[NPROC]; p++){
     if(p->state == UNUSED)
       continue;
@@ -795,7 +806,7 @@ procdump(void)
       state = states[p->state];
     else
       state = "???";
-    printf("%d %s %s", p->pid, state, p->name);
+    printf("%d %s %s %d", p->pid, state, p->name, PROC_PAGES(p));
     printf("\n");
   }
 }

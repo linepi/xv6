@@ -1,5 +1,6 @@
 struct stat;
 struct rtcdate;
+struct system_info;
 
 // system calls
 int fork(void);
@@ -25,6 +26,7 @@ int sleep(int);
 int uptime(void);
 int trace(int);
 int pgaccess(const void*, int, void*);
+int system_info(struct system_info*);
 
 // ulib.c
 int stat(const char*, struct stat*);

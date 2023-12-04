@@ -3,8 +3,13 @@
 //
 
 #include "kernel/types.h"
+#include "kernel/riscv.h"
 #include "kernel/memlayout.h"
 #include "user/user.h"
+#include "user/system.h"
+
+void 
+print_free();
 
 // allocate more than half of physical memory,
 // then fork. this will fail in the default
@@ -177,19 +182,35 @@ filetest()
   printf("ok\n");
 }
 
+void 
+print_free()
+{
+  struct system_info si;
+  if (system_info(&si) == -1) {
+    exit(0);
+  } else {
+    printf("memleft: %d page\n", si.memleft / 4096);
+  }
+}
+
 int
 main(int argc, char *argv[])
 {
+  print_free();
   simpletest();
 
-  // check that the first simpletest() freed the physical memory.
   simpletest();
+  print_free();
 
   threetest();
+  print_free();
   threetest();
+  print_free();
   threetest();
+  print_free();
 
   filetest();
+  print_free();
 
   printf("ALL COW TESTS PASSED\n");
 

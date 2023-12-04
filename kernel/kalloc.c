@@ -10,8 +10,8 @@
 
 void freerange(void *pa_start, void *pa_end);
 
-extern char end[]; // first address after kernel.
-                   // defined by kernel.ld.
+extern char end[]; // first address after kernel, defined by kernel.ld.
+
 
 struct run {
   struct run *next;
@@ -20,14 +20,34 @@ struct run {
 struct {
   struct spinlock lock;
   struct run *freelist;
+  int max_pagenum;
+  uint64 start;
+  int inited;
 } kmem;
+
+struct {
+  struct spinlock lock;
+  uchar *v;
+} kpage_ref;
 
 void
 kinit()
 {
   initlock(&kmem.lock, "kmem");
+  initlock(&kpage_ref.lock, "kpage_ref");
   kmem.freelist = 0;
-  freerange(end, (void*)PHYSTOP);
+  kmem.max_pagenum = (PHYSTOP - (uint64)end) / (PGSIZE + 1);
+  kpage_ref.v = (uchar *)end;
+  kmem.start = PGROUNDUP((uint64)end + kmem.max_pagenum);
+  
+  for (int i = 0; i < kmem.max_pagenum; i++) {
+    kpage_ref.v[i] = 1;
+  }
+
+  if (PHYSTOP - kmem.start != PGSIZE * kmem.max_pagenum) 
+    panic("kinit");
+  freerange(end + kmem.max_pagenum, (void*)PHYSTOP);
+  kmem.inited = 1;
 }
 
 void
@@ -54,13 +74,26 @@ kfree(void *pa)
     printf("[warning] kfree magic error\n");
     return;
   }
-  // Fill with junk to catch dangling refs.
-  memset(pa, 1, PGSIZE);
 
-  acquire(&kmem.lock);
-  r->next = kmem.freelist;
-  kmem.freelist = r;
-  release(&kmem.lock);
+  acquire(&kpage_ref.lock);
+  int page_ref = inc_page_ref((uint64)pa, 0);
+  if (page_ref <= 0) {
+    printf("[warning] kfree free page with ref <= 0\n");
+    release(&kpage_ref.lock);
+    return;
+  }
+  inc_page_ref((uint64)pa, -1);
+  release(&kpage_ref.lock);
+
+  if (page_ref == 1) { // actually free
+    // Fill with junk to catch dangling refs.
+    memset(pa, 1, PGSIZE);
+    acquire(&kmem.lock);
+    r->next = kmem.freelist;
+    kmem.freelist = r;
+    release(&kmem.lock);
+    // printf("free: 0x%lx\n", pa);
+  }
 }
 
 // Allocate one page of physical memory.
@@ -73,12 +106,18 @@ kalloc(void)
 
   acquire(&kmem.lock);
   r = kmem.freelist;
-  if(r)
+  if(r) {
     kmem.freelist = r->next;
+  }
   release(&kmem.lock);
 
-  if(r)
+  if(r) {
     memset((char*)r, 5, PGSIZE); // fill with junk
+    acquire(&kpage_ref.lock);
+    chg_page_ref((uint64)r, 1);
+    release(&kpage_ref.lock);
+  }
+  // printf("kalloc: 0x%lx\n", r);
   return (void*)r;
 }
 
@@ -96,4 +135,41 @@ kmemleft()
     r = r->next;
   }
   return ret;
+}
+
+void 
+acquire_page_ref()
+{
+  acquire(&kpage_ref.lock);
+}
+
+void 
+release_page_ref()
+{
+  release(&kpage_ref.lock);
+}
+
+int 
+inc_page_ref(uint64 addr, int cnt)
+{
+  if (addr < kmem.start || (uint64)addr >= PHYSTOP)
+    return 0;
+  int idx = (PGROUNDDOWN(addr) - kmem.start) / PGSIZE;
+  int cur = kpage_ref.v[idx];
+  if (cnt > 0 && cur + cnt > 255) 
+    panic("inc page_ref");
+  if (cnt < 0 && cur + cnt < 0)
+    panic("dec page_ref");
+  kpage_ref.v[idx] += cnt;
+  return cur;
+}
+
+int 
+chg_page_ref(uint64 addr, int to)
+{
+  if (addr < kmem.start || (uint64)addr >= PHYSTOP)
+    return 0;
+  int before = inc_page_ref(addr, 0);
+  inc_page_ref(addr, to - before);
+  return before;
 }
