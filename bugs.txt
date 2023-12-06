@@ -2,535 +2,199 @@
 2. may stuck at kernel start()
 
 Usertests for 3 cpu:
-$ usertests  
-usertests starting
-memleft: 30223
-test MAXVAplus: usertrap(): unexpected scause 0x000000000000000f pid=5
-            sepc=0x0000000000015a4e stval=0x0000004000000000
-usertrap(): unexpected scause 0x000000000000000f pid=6
-            sepc=0x0000000000015a4e stval=0x0000008000000000
-usertrap(): unexpected scause 0x000000000000000f pid=7
-            sepc=0x0000000000015a4e stval=0x0000010000000000
-usertrap(): unexpected scause 0x000000000000000f pid=8
-            sepc=0x0000000000015a4e stval=0x0000020000000000
-usertrap(): unexpected scause 0x000000000000000f pid=9
-            sepc=0x0000000000015a4e stval=0x0000040000000000
-usertrap(): unexpected scause 0x000000000000000f pid=10
-            sepc=0x0000000000015a4e stval=0x0000080000000000
-usertrap(): unexpected scause 0x000000000000000f pid=11
-            sepc=0x0000000000015a4e stval=0x0000100000000000
-usertrap(): unexpected scause 0x000000000000000f pid=12
-            sepc=0x0000000000015a4e stval=0x0000200000000000
-usertrap(): unexpected scause 0x000000000000000f pid=13
-            sepc=0x0000000000015a4e stval=0x0000400000000000
-usertrap(): unexpected scause 0x000000000000000f pid=14
-            sepc=0x0000000000015a4e stval=0x0000800000000000
-usertrap(): unexpected scause 0x000000000000000f pid=15
-            sepc=0x0000000000015a4e stval=0x0001000000000000
-usertrap(): unexpected scause 0x000000000000000f pid=16
-            sepc=0x0000000000015a4e stval=0x0002000000000000
-usertrap(): unexpected scause 0x000000000000000f pid=17
-            sepc=0x0000000000015a4e stval=0x0004000000000000
-usertrap(): unexpected scause 0x000000000000000f pid=18
-            sepc=0x0000000000015a4e stval=0x0008000000000000
-usertrap(): unexpected scause 0x000000000000000f pid=19
-            sepc=0x0000000000015a4e stval=0x0010000000000000
-usertrap(): unexpected scause 0x000000000000000f pid=20
-            sepc=0x0000000000015a4e stval=0x0020000000000000
-usertrap(): unexpected scause 0x000000000000000f pid=21
-            sepc=0x0000000000015a4e stval=0x0040000000000000
-usertrap(): unexpected scause 0x000000000000000f pid=22
-            sepc=0x0000000000015a4e stval=0x0080000000000000
-usertrap(): unexpected scause 0x000000000000000f pid=23
-            sepc=0x0000000000015a4e stval=0x0100000000000000
-usertrap(): unexpected scause 0x000000000000000f pid=24
-            sepc=0x0000000000015a4e stval=0x0200000000000000
-usertrap(): unexpected scause 0x000000000000000f pid=25
-            sepc=0x0000000000015a4e stval=0x0400000000000000
-usertrap(): unexpected scause 0x000000000000000f pid=26
-            sepc=0x0000000000015a4e stval=0x0800000000000000
-usertrap(): unexpected scause 0x000000000000000f pid=27
-            sepc=0x0000000000015a4e stval=0x1000000000000000
-usertrap(): unexpected scause 0x000000000000000f pid=28
-            sepc=0x0000000000015a4e stval=0x2000000000000000
-usertrap(): unexpected scause 0x000000000000000f pid=29
-            sepc=0x0000000000015a4e stval=0x4000000000000000
-usertrap(): unexpected scause 0x000000000000000f pid=30
-            sepc=0x0000000000015a4e stval=0x8000000000000000
-OK
-memleft: 30223
-test manywrites: OK
-memleft: 30223
-test execout: OK
-memleft: 30223
-test copyin: OK
-memleft: 30223
-test copyout: OK
-memleft: 30223
-test copyinstr1: OK
-memleft: 30223
-test copyinstr2: OK
-memleft: 30223
-test copyinstr3: OK
-memleft: 30223
-test rwsbrk: OK
-memleft: 30223
-test truncate1: OK
-memleft: 30223
-test truncate2: OK
-memleft: 30223
-test truncate3: OK
-memleft: 30223
-test reparent2: OK
-memleft: 30214
-test pgbug: OK
-memleft: 30214
-test sbrkbugs: OK
-memleft: 30214
-test badarg: OK
-memleft: 30214
-test reparent: OK
-memleft: 30213
-test twochildren: OK
-memleft: 30208
-test forkfork: OK
-memleft: 30203
-test forkforkfork: OK
-memleft: 30203
-test argptest: OK
-memleft: 30203
-test createdelete: OK
-memleft: 30203
-test linkunlink: OK
-memleft: 30203
-test linktest: OK
-memleft: 30203
-test unlinkread: OK
-memleft: 30203
-test concreate: OK
-memleft: 30195
-test subdir: OK
-memleft: 30195
-test fourfiles: OK
-memleft: 30195
-test sharedfd: OK
-memleft: 30195
-test dirtest: OK
-memleft: 30195
-test exectest: OK
-memleft: 30195
-test bigargtest: OK
-memleft: 30195
-test bigwrite: OK
-memleft: 30195
-test bsstest: OK
-memleft: 30195
-test sbrkbasic: OK
-memleft: 30195
-test sbrkmuch: OK
-memleft: 30195
-test kernmem: usertrap(): unexpected scause 0x000000000000000d pid=6219
-            sepc=0x0000000000015974 stval=0x0000000080000000
-usertrap(): unexpected scause 0x000000000000000d pid=6220
-            sepc=0x0000000000015974 stval=0x000000008000c350
-usertrap(): unexpected scause 0x000000000000000d pid=6221
-            sepc=0x0000000000015974 stval=0x00000000800186a0
-usertrap(): unexpected scause 0x000000000000000d pid=6222
-            sepc=0x0000000000015974 stval=0x00000000800249f0
-usertrap(): unexpected scause 0x000000000000000d pid=6223
-            sepc=0x0000000000015974 stval=0x0000000080030d40
-usertrap(): unexpected scause 0x000000000000000d pid=6224
-            sepc=0x0000000000015974 stval=0x000000008003d090
-usertrap(): unexpected scause 0x000000000000000d pid=6225
-            sepc=0x0000000000015974 stval=0x00000000800493e0
-usertrap(): unexpected scause 0x000000000000000d pid=6226
-            sepc=0x0000000000015974 stval=0x0000000080055730
-usertrap(): unexpected scause 0x000000000000000d pid=6227
-            sepc=0x0000000000015974 stval=0x0000000080061a80
-usertrap(): unexpected scause 0x000000000000000d pid=6228
-            sepc=0x0000000000015974 stval=0x000000008006ddd0
-usertrap(): unexpected scause 0x000000000000000d pid=6229
-            sepc=0x0000000000015974 stval=0x000000008007a120
-usertrap(): unexpected scause 0x000000000000000d pid=6230
-            sepc=0x0000000000015974 stval=0x0000000080086470
-usertrap(): unexpected scause 0x000000000000000d pid=6231
-            sepc=0x0000000000015974 stval=0x00000000800927c0
-usertrap(): unexpected scause 0x000000000000000d pid=6232
-            sepc=0x0000000000015974 stval=0x000000008009eb10
-usertrap(): unexpected scause 0x000000000000000d pid=6233
-            sepc=0x0000000000015974 stval=0x00000000800aae60
-usertrap(): unexpected scause 0x000000000000000d pid=6234
-            sepc=0x0000000000015974 stval=0x00000000800b71b0
-usertrap(): unexpected scause 0x000000000000000d pid=6235
-            sepc=0x0000000000015974 stval=0x00000000800c3500
-usertrap(): unexpected scause 0x000000000000000d pid=6236
-            sepc=0x0000000000015974 stval=0x00000000800cf850
-usertrap(): unexpected scause 0x000000000000000d pid=6237
-            sepc=0x0000000000015974 stval=0x00000000800dbba0
-usertrap(): unexpected scause 0x000000000000000d pid=6238
-            sepc=0x0000000000015974 stval=0x00000000800e7ef0
-usertrap(): unexpected scause 0x000000000000000d pid=6239
-            sepc=0x0000000000015974 stval=0x00000000800f4240
-usertrap(): unexpected scause 0x000000000000000d pid=6240
-            sepc=0x0000000000015974 stval=0x0000000080100590
-usertrap(): unexpected scause 0x000000000000000d pid=6241
-            sepc=0x0000000000015974 stval=0x000000008010c8e0
-usertrap(): unexpected scause 0x000000000000000d pid=6242
-            sepc=0x0000000000015974 stval=0x0000000080118c30
-usertrap(): unexpected scause 0x000000000000000d pid=6243
-            sepc=0x0000000000015974 stval=0x0000000080124f80
-usertrap(): unexpected scause 0x000000000000000d pid=6244
-            sepc=0x0000000000015974 stval=0x00000000801312d0
-usertrap(): unexpected scause 0x000000000000000d pid=6245
-            sepc=0x0000000000015974 stval=0x000000008013d620
-usertrap(): unexpected scause 0x000000000000000d pid=6246
-            sepc=0x0000000000015974 stval=0x0000000080149970
-usertrap(): unexpected scause 0x000000000000000d pid=6247
-            sepc=0x0000000000015974 stval=0x0000000080155cc0
-usertrap(): unexpected scause 0x000000000000000d pid=6248
-            sepc=0x0000000000015974 stval=0x0000000080162010
-usertrap(): unexpected scause 0x000000000000000d pid=6249
-            sepc=0x0000000000015974 stval=0x000000008016e360
-usertrap(): unexpected scause 0x000000000000000d pid=6250
-            sepc=0x0000000000015974 stval=0x000000008017a6b0
-usertrap(): unexpected scause 0x000000000000000d pid=6251
-            sepc=0x0000000000015974 stval=0x0000000080186a00
-usertrap(): unexpected scause 0x000000000000000d pid=6252
-            sepc=0x0000000000015974 stval=0x0000000080192d50
-usertrap(): unexpected scause 0x000000000000000d pid=6253
-            sepc=0x0000000000015974 stval=0x000000008019f0a0
-usertrap(): unexpected scause 0x000000000000000d pid=6254
-            sepc=0x0000000000015974 stval=0x00000000801ab3f0
-usertrap(): unexpected scause 0x000000000000000d pid=6255
-            sepc=0x0000000000015974 stval=0x00000000801b7740
-usertrap(): unexpected scause 0x000000000000000d pid=6256
-            sepc=0x0000000000015974 stval=0x00000000801c3a90
-usertrap(): unexpected scause 0x000000000000000d pid=6257
-            sepc=0x0000000000015974 stval=0x00000000801cfde0
-usertrap(): unexpected scause 0x000000000000000d pid=6258
-            sepc=0x0000000000015974 stval=0x00000000801dc130
-OK
-memleft: 30195
-test sbrkfail: usertrap(): unexpected scause 0x000000000000000d pid=6270
-            sepc=0x0000000000015ca8 stval=0x000000008808b000
-OK
-memleft: 30195
-test sbrkarg: OK
-memleft: 30195
-test sbrklast: OK
-memleft: 30195
-test validatetest: OK
-memleft: 30195
-test stacktest: usertrap(): unexpected scause 0x000000000000000d pid=6275
-            sepc=0x00000000000163c2 stval=0x0000003ffff1eb10
-OK
-memleft: 30195
-test opentest: OK
-memleft: 30195
-test writetest: OK
-memleft: 30195
-test createtest: OK
-memleft: 30195
-test openiput: OK
-memleft: 30195
-test exitiput: OK
-memleft: 30195
-test iput: OK
-memleft: 30195
-test mem: OK
-memleft: 30195
-test pipe1: OK
-memleft: 30195
-test killstatus: OK
-memleft: 30195
-test preempt: kill... wait... OK
-memleft: 30195
-test exitwait: OK
-memleft: 30195
-test rmdot: OK
-memleft: 30195
-test fourteen: OK
-memleft: 30195
-test bigfile: OK
-memleft: 30195
-test dirfile: OK
-memleft: 30195
-test iref: OK
-memleft: 30195
-test forktest: OK
-memleft: 30181
-test bigdir: OK
-memleft: 30181
-test ugetpid: OK
-memleft: 30157
-test pgaccesstest: OK
-memleft: 30152
-consume 3212 time
-ALL TESTS PASSED
-
-Usertest for 1 cpu:
 $ usertests
 usertests starting
-memleft: 30224
-test MAXVAplus: usertrap(): unexpected scause 0x000000000000000f pid=5
-            sepc=0x0000000000015a4e stval=0x0000004000000000
-usertrap(): unexpected scause 0x000000000000000f pid=6
-            sepc=0x0000000000015a4e stval=0x0000008000000000
-usertrap(): unexpected scause 0x000000000000000f pid=7
-            sepc=0x0000000000015a4e stval=0x0000010000000000
-usertrap(): unexpected scause 0x000000000000000f pid=8
-            sepc=0x0000000000015a4e stval=0x0000020000000000
-usertrap(): unexpected scause 0x000000000000000f pid=9
-            sepc=0x0000000000015a4e stval=0x0000040000000000
-usertrap(): unexpected scause 0x000000000000000f pid=10
-            sepc=0x0000000000015a4e stval=0x0000080000000000
-usertrap(): unexpected scause 0x000000000000000f pid=11
-            sepc=0x0000000000015a4e stval=0x0000100000000000
-usertrap(): unexpected scause 0x000000000000000f pid=12
-            sepc=0x0000000000015a4e stval=0x0000200000000000
-usertrap(): unexpected scause 0x000000000000000f pid=13
-            sepc=0x0000000000015a4e stval=0x0000400000000000
-usertrap(): unexpected scause 0x000000000000000f pid=14
-            sepc=0x0000000000015a4e stval=0x0000800000000000
-usertrap(): unexpected scause 0x000000000000000f pid=15
-            sepc=0x0000000000015a4e stval=0x0001000000000000
-usertrap(): unexpected scause 0x000000000000000f pid=16
-            sepc=0x0000000000015a4e stval=0x0002000000000000
-usertrap(): unexpected scause 0x000000000000000f pid=17
-            sepc=0x0000000000015a4e stval=0x0004000000000000
-usertrap(): unexpected scause 0x000000000000000f pid=18
-            sepc=0x0000000000015a4e stval=0x0008000000000000
-usertrap(): unexpected scause 0x000000000000000f pid=19
-            sepc=0x0000000000015a4e stval=0x0010000000000000
-usertrap(): unexpected scause 0x000000000000000f pid=20
-            sepc=0x0000000000015a4e stval=0x0020000000000000
-usertrap(): unexpected scause 0x000000000000000f pid=21
-            sepc=0x0000000000015a4e stval=0x0040000000000000
-usertrap(): unexpected scause 0x000000000000000f pid=22
-            sepc=0x0000000000015a4e stval=0x0080000000000000
-usertrap(): unexpected scause 0x000000000000000f pid=23
-            sepc=0x0000000000015a4e stval=0x0100000000000000
-usertrap(): unexpected scause 0x000000000000000f pid=24
-            sepc=0x0000000000015a4e stval=0x0200000000000000
-usertrap(): unexpected scause 0x000000000000000f pid=25
-            sepc=0x0000000000015a4e stval=0x0400000000000000
-usertrap(): unexpected scause 0x000000000000000f pid=26
-            sepc=0x0000000000015a4e stval=0x0800000000000000
-usertrap(): unexpected scause 0x000000000000000f pid=27
-            sepc=0x0000000000015a4e stval=0x1000000000000000
-usertrap(): unexpected scause 0x000000000000000f pid=28
-            sepc=0x0000000000015a4e stval=0x2000000000000000
-usertrap(): unexpected scause 0x000000000000000f pid=29
-            sepc=0x0000000000015a4e stval=0x4000000000000000
-usertrap(): unexpected scause 0x000000000000000f pid=30
-            sepc=0x0000000000015a4e stval=0x8000000000000000
+memleft: 30223
+test MAXVAplus: segmentation fault on 0x4000000000(pid=7 sepc=0x15a4e)
+segmentation fault on 0x8000000000(pid=8 sepc=0x15a4e)
+segmentation fault on 0x10000000000(pid=9 sepc=0x15a4e)
+segmentation fault on 0x20000000000(pid=10 sepc=0x15a4e)
+segmentation fault on 0x40000000000(pid=11 sepc=0x15a4e)
+segmentation fault on 0x80000000000(pid=12 sepc=0x15a4e)
+segmentation fault on 0x100000000000(pid=13 sepc=0x15a4e)
+segmentation fault on 0x200000000000(pid=14 sepc=0x15a4e)
+segmentation fault on 0x400000000000(pid=15 sepc=0x15a4e)
+segmentation fault on 0x800000000000(pid=16 sepc=0x15a4e)
+segmentation fault on 0x1000000000000(pid=17 sepc=0x15a4e)
+segmentation fault on 0x2000000000000(pid=18 sepc=0x15a4e)
+segmentation fault on 0x4000000000000(pid=19 sepc=0x15a4e)
+segmentation fault on 0x8000000000000(pid=20 sepc=0x15a4e)
+segmentation fault on 0x10000000000000(pid=21 sepc=0x15a4e)
+segmentation fault on 0x20000000000000(pid=22 sepc=0x15a4e)
+segmentation fault on 0x40000000000000(pid=23 sepc=0x15a4e)
+segmentation fault on 0x80000000000000(pid=24 sepc=0x15a4e)
+segmentation fault on 0x100000000000000(pid=25 sepc=0x15a4e)
+segmentation fault on 0x200000000000000(pid=26 sepc=0x15a4e)
+segmentation fault on 0x400000000000000(pid=27 sepc=0x15a4e)
+segmentation fault on 0x800000000000000(pid=28 sepc=0x15a4e)
+segmentation fault on 0x1000000000000000(pid=29 sepc=0x15a4e)
+segmentation fault on 0x2000000000000000(pid=30 sepc=0x15a4e)
+segmentation fault on 0x4000000000000000(pid=31 sepc=0x15a4e)
+segmentation fault on 0x-0(pid=32 sepc=0x15a4e)
 OK
-memleft: 30224
+memleft: 30223
 test manywrites: OK
-memleft: 30224
+memleft: 30223
 test execout: OK
-memleft: 30224
+memleft: 30223
 test copyin: OK
-memleft: 30224
+memleft: 30223
 test copyout: OK
-memleft: 30224
+memleft: 30223
 test copyinstr1: OK
-memleft: 30224
+memleft: 30223
 test copyinstr2: OK
-memleft: 30224
+memleft: 30223
 test copyinstr3: OK
-memleft: 30224
+memleft: 30223
 test rwsbrk: OK
-memleft: 30224
+memleft: 30223
 test truncate1: OK
-memleft: 30224
+memleft: 30223
 test truncate2: OK
-memleft: 30224
+memleft: 30223
 test truncate3: OK
-memleft: 30224
+memleft: 30223
 test reparent2: OK
-memleft: 30224
+memleft: 30220
 test pgbug: OK
-memleft: 30224
+memleft: 30220
 test sbrkbugs: OK
-memleft: 30224
+memleft: 30220
 test badarg: OK
-memleft: 30224
+memleft: 30220
 test reparent: OK
-memleft: 30224
+memleft: 30214
 test twochildren: OK
-memleft: 30224
+memleft: 30210
 test forkfork: OK
-memleft: 30224
+memleft: 30205
 test forkforkfork: OK
-memleft: 30224
+memleft: 30205
 test argptest: OK
-memleft: 30224
+memleft: 30205
 test createdelete: OK
-memleft: 30224
+memleft: 30205
 test linkunlink: OK
-memleft: 30224
+memleft: 30205
 test linktest: OK
-memleft: 30224
+memleft: 30205
 test unlinkread: OK
-memleft: 30224
+memleft: 30205
 test concreate: OK
-memleft: 30224
+memleft: 30205
 test subdir: OK
-memleft: 30224
+memleft: 30205
 test fourfiles: OK
-memleft: 30224
+memleft: 30205
 test sharedfd: OK
-memleft: 30224
+memleft: 30205
 test dirtest: OK
-memleft: 30224
+memleft: 30205
 test exectest: OK
-memleft: 30224
+memleft: 30205
 test bigargtest: OK
-memleft: 30224
+memleft: 30205
 test bigwrite: OK
-memleft: 30224
+memleft: 30205
 test bsstest: OK
-memleft: 30224
+memleft: 30205
 test sbrkbasic: OK
-memleft: 30224
+memleft: 30205
 test sbrkmuch: OK
-memleft: 30224
-test kernmem: usertrap(): unexpected scause 0x000000000000000d pid=6216
-            sepc=0x0000000000015974 stval=0x0000000080000000
-usertrap(): unexpected scause 0x000000000000000d pid=6217
-            sepc=0x0000000000015974 stval=0x000000008000c350
-usertrap(): unexpected scause 0x000000000000000d pid=6218
-            sepc=0x0000000000015974 stval=0x00000000800186a0
-usertrap(): unexpected scause 0x000000000000000d pid=6219
-            sepc=0x0000000000015974 stval=0x00000000800249f0
-usertrap(): unexpected scause 0x000000000000000d pid=6220
-            sepc=0x0000000000015974 stval=0x0000000080030d40
-usertrap(): unexpected scause 0x000000000000000d pid=6221
-            sepc=0x0000000000015974 stval=0x000000008003d090
-usertrap(): unexpected scause 0x000000000000000d pid=6222
-            sepc=0x0000000000015974 stval=0x00000000800493e0
-usertrap(): unexpected scause 0x000000000000000d pid=6223
-            sepc=0x0000000000015974 stval=0x0000000080055730
-usertrap(): unexpected scause 0x000000000000000d pid=6224
-            sepc=0x0000000000015974 stval=0x0000000080061a80
-usertrap(): unexpected scause 0x000000000000000d pid=6225
-            sepc=0x0000000000015974 stval=0x000000008006ddd0
-usertrap(): unexpected scause 0x000000000000000d pid=6226
-            sepc=0x0000000000015974 stval=0x000000008007a120
-usertrap(): unexpected scause 0x000000000000000d pid=6227
-            sepc=0x0000000000015974 stval=0x0000000080086470
-usertrap(): unexpected scause 0x000000000000000d pid=6228
-            sepc=0x0000000000015974 stval=0x00000000800927c0
-usertrap(): unexpected scause 0x000000000000000d pid=6229
-            sepc=0x0000000000015974 stval=0x000000008009eb10
-usertrap(): unexpected scause 0x000000000000000d pid=6230
-            sepc=0x0000000000015974 stval=0x00000000800aae60
-usertrap(): unexpected scause 0x000000000000000d pid=6231
-            sepc=0x0000000000015974 stval=0x00000000800b71b0
-usertrap(): unexpected scause 0x000000000000000d pid=6232
-            sepc=0x0000000000015974 stval=0x00000000800c3500
-usertrap(): unexpected scause 0x000000000000000d pid=6233
-            sepc=0x0000000000015974 stval=0x00000000800cf850
-usertrap(): unexpected scause 0x000000000000000d pid=6234
-            sepc=0x0000000000015974 stval=0x00000000800dbba0
-usertrap(): unexpected scause 0x000000000000000d pid=6235
-            sepc=0x0000000000015974 stval=0x00000000800e7ef0
-usertrap(): unexpected scause 0x000000000000000d pid=6236
-            sepc=0x0000000000015974 stval=0x00000000800f4240
-usertrap(): unexpected scause 0x000000000000000d pid=6237
-            sepc=0x0000000000015974 stval=0x0000000080100590
-usertrap(): unexpected scause 0x000000000000000d pid=6238
-            sepc=0x0000000000015974 stval=0x000000008010c8e0
-usertrap(): unexpected scause 0x000000000000000d pid=6239
-            sepc=0x0000000000015974 stval=0x0000000080118c30
-usertrap(): unexpected scause 0x000000000000000d pid=6240
-            sepc=0x0000000000015974 stval=0x0000000080124f80
-usertrap(): unexpected scause 0x000000000000000d pid=6241
-            sepc=0x0000000000015974 stval=0x00000000801312d0
-usertrap(): unexpected scause 0x000000000000000d pid=6242
-            sepc=0x0000000000015974 stval=0x000000008013d620
-usertrap(): unexpected scause 0x000000000000000d pid=6243
-            sepc=0x0000000000015974 stval=0x0000000080149970
-usertrap(): unexpected scause 0x000000000000000d pid=6244
-            sepc=0x0000000000015974 stval=0x0000000080155cc0
-usertrap(): unexpected scause 0x000000000000000d pid=6245
-            sepc=0x0000000000015974 stval=0x0000000080162010
-usertrap(): unexpected scause 0x000000000000000d pid=6246
-            sepc=0x0000000000015974 stval=0x000000008016e360
-usertrap(): unexpected scause 0x000000000000000d pid=6247
-            sepc=0x0000000000015974 stval=0x000000008017a6b0
-usertrap(): unexpected scause 0x000000000000000d pid=6248
-            sepc=0x0000000000015974 stval=0x0000000080186a00
-usertrap(): unexpected scause 0x000000000000000d pid=6249
-            sepc=0x0000000000015974 stval=0x0000000080192d50
-usertrap(): unexpected scause 0x000000000000000d pid=6250
-            sepc=0x0000000000015974 stval=0x000000008019f0a0
-usertrap(): unexpected scause 0x000000000000000d pid=6251
-            sepc=0x0000000000015974 stval=0x00000000801ab3f0
-usertrap(): unexpected scause 0x000000000000000d pid=6252
-            sepc=0x0000000000015974 stval=0x00000000801b7740
-usertrap(): unexpected scause 0x000000000000000d pid=6253
-            sepc=0x0000000000015974 stval=0x00000000801c3a90
-usertrap(): unexpected scause 0x000000000000000d pid=6254
-            sepc=0x0000000000015974 stval=0x00000000801cfde0
-usertrap(): unexpected scause 0x000000000000000d pid=6255
-            sepc=0x0000000000015974 stval=0x00000000801dc130
+memleft: 30205
+test kernmem: segmentation fault on 0x80000000(pid=6220 sepc=0x15974)
+segmentation fault on 0x8000c350(pid=6221 sepc=0x15974)
+segmentation fault on 0x800186a0(pid=6222 sepc=0x15974)
+segmentation fault on 0x800249f0(pid=6223 sepc=0x15974)
+segmentation fault on 0x80030d40(pid=6224 sepc=0x15974)
+segmentation fault on 0x8003d090(pid=6225 sepc=0x15974)
+segmentation fault on 0x800493e0(pid=6226 sepc=0x15974)
+segmentation fault on 0x80055730(pid=6227 sepc=0x15974)
+segmentation fault on 0x80061a80(pid=6228 sepc=0x15974)
+segmentation fault on 0x8006ddd0(pid=6229 sepc=0x15974)
+segmentation fault on 0x8007a120(pid=6230 sepc=0x15974)
+segmentation fault on 0x80086470(pid=6231 sepc=0x15974)
+segmentation fault on 0x800927c0(pid=6232 sepc=0x15974)
+segmentation fault on 0x8009eb10(pid=6233 sepc=0x15974)
+segmentation fault on 0x800aae60(pid=6234 sepc=0x15974)
+segmentation fault on 0x800b71b0(pid=6235 sepc=0x15974)
+segmentation fault on 0x800c3500(pid=6236 sepc=0x15974)
+segmentation fault on 0x800cf850(pid=6237 sepc=0x15974)
+segmentation fault on 0x800dbba0(pid=6238 sepc=0x15974)
+segmentation fault on 0x800e7ef0(pid=6239 sepc=0x15974)
+segmentation fault on 0x800f4240(pid=6240 sepc=0x15974)
+segmentation fault on 0x80100590(pid=6241 sepc=0x15974)
+segmentation fault on 0x8010c8e0(pid=6242 sepc=0x15974)
+segmentation fault on 0x80118c30(pid=6243 sepc=0x15974)
+segmentation fault on 0x80124f80(pid=6244 sepc=0x15974)
+segmentation fault on 0x801312d0(pid=6245 sepc=0x15974)
+segmentation fault on 0x8013d620(pid=6246 sepc=0x15974)
+segmentation fault on 0x80149970(pid=6247 sepc=0x15974)
+segmentation fault on 0x80155cc0(pid=6248 sepc=0x15974)
+segmentation fault on 0x80162010(pid=6249 sepc=0x15974)
+segmentation fault on 0x8016e360(pid=6250 sepc=0x15974)
+segmentation fault on 0x8017a6b0(pid=6251 sepc=0x15974)
+segmentation fault on 0x80186a00(pid=6252 sepc=0x15974)
+segmentation fault on 0x80192d50(pid=6253 sepc=0x15974)
+segmentation fault on 0x8019f0a0(pid=6254 sepc=0x15974)
+segmentation fault on 0x801ab3f0(pid=6255 sepc=0x15974)
+segmentation fault on 0x801b7740(pid=6256 sepc=0x15974)
+segmentation fault on 0x801c3a90(pid=6257 sepc=0x15974)
+segmentation fault on 0x801cfde0(pid=6258 sepc=0x15974)
+segmentation fault on 0x801dc130(pid=6259 sepc=0x15974)
 OK
-memleft: 30224
-test sbrkfail: usertrap(): unexpected scause 0x000000000000000d pid=6267
-            sepc=0x0000000000015ca8 stval=0x000000008809f000
-OK
-memleft: 30224
+memleft: 30204
+test sbrkfail: OK
+memleft: 30204
 test sbrkarg: OK
-memleft: 30224
+memleft: 30204
 test sbrklast: OK
-memleft: 30224
+memleft: 30204
 test validatetest: OK
-memleft: 30224
-test stacktest: usertrap(): unexpected scause 0x000000000000000d pid=6272
-            sepc=0x00000000000163c2 stval=0x0000003fffe9bb10
+memleft: 30204
+test stacktest: segmentation fault on 0x3fffef2b10(pid=6276 sepc=0x163c2)
 OK
-memleft: 30224
+memleft: 30204
 test opentest: OK
-memleft: 30224
+memleft: 30204
 test writetest: OK
-memleft: 30224
+memleft: 30204
 test createtest: OK
-memleft: 30224
+memleft: 30204
 test openiput: OK
-memleft: 30224
+memleft: 30204
 test exitiput: OK
-memleft: 30224
+memleft: 30204
 test iput: OK
-memleft: 30224
+memleft: 30204
 test mem: OK
-memleft: 30224
+memleft: 30204
 test pipe1: OK
-memleft: 30224
+memleft: 30204
 test killstatus: OK
-memleft: 30224
+memleft: 30204
 test preempt: kill... wait... OK
-memleft: 30224
+memleft: 30204
 test exitwait: OK
-memleft: 30224
+memleft: 30204
 test rmdot: OK
-memleft: 30224
+memleft: 30204
 test fourteen: OK
-memleft: 30224
+memleft: 30204
 test bigfile: OK
-memleft: 30224
+memleft: 30204
 test dirfile: OK
-memleft: 30224
+memleft: 30204
 test iref: OK
-memleft: 30224
+memleft: 30204
 test forktest: OK
-memleft: 30224
+memleft: 30191
 test bigdir: OK
-memleft: 30224
+memleft: 30191
 test ugetpid: OK
-memleft: 30125
-test pgaccesstest: OK
-memleft: 30224
-consume 2896 time
+memleft: 30191
+test pgaccess: OK
+memleft: 30191
+consume 3539 time
 ALL TESTS PASSED

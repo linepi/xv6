@@ -64,8 +64,20 @@ usertrap(void)
     intr_on();
 
     syscall();
-  } else if (r_scause() == 15 && uaddrvalid(p, r_stval())) { // store page fault, this is copy on write
-    if (uvmrealloc(p, PGROUNDDOWN(r_stval())) != 0) {
+  } else if (r_scause() == 13 || r_scause() == 15) { // store or load page fault 
+    uint64 stval = r_stval();
+    if (uaddrvalid(p, stval)) {
+      if (cowpage(p, stval)) { // this is copy on write
+        if (uvmrealloc(p, PGROUNDDOWN(stval)) != 0) {
+          p->killed = 1;
+        }
+      } else { // may lazy
+        if (uvmalloc(p, PGROUNDDOWN(stval), PGROUNDDOWN(stval) + PGSIZE) == -1) {
+          p->killed = 1;
+        }
+      }
+    } else {
+      printf("segmentation fault on 0x%lx(pid=%d sepc=0x%lx)\n", stval, p->pid, r_sepc());
       p->killed = 1;
     }
   } else if((which_dev = devintr()) != 0){
@@ -147,8 +159,20 @@ kerneltrap()
   if(intr_get() != 0)
     panic("kerneltrap: interrupts enabled");
 
-  if (scause == 15 && uaddrvalid(p, r_stval())) {
-    if (uvmrealloc(p, PGROUNDDOWN(r_stval())) != 0) {
+  if (r_scause() == 13 || r_scause() == 15) { // store or load page fault 
+    uint64 stval = r_stval();
+    if (uaddrvalid(p, stval)) {
+      if (cowpage(p, stval)) { // this is copy on write
+        if (uvmrealloc(p, PGROUNDDOWN(stval)) != 0) {
+          p->killed = 1;
+        }
+      } else { // may lazy
+        if (uvmalloc(p, PGROUNDDOWN(stval), PGROUNDDOWN(stval) + PGSIZE) == -1) {
+          p->killed = 1;
+        }
+      }
+    } else {
+      printf("segmentation fault on 0x%lx(pid=%d sepc=0x%lx)\n", stval, p->pid, r_sepc());
       p->killed = 1;
     }
   } else if((which_dev = devintr()) == 0){

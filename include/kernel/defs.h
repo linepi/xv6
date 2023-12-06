@@ -184,6 +184,7 @@ void            upageclear(pagetable_t, uint64);
 
 int             uvmalloc(struct proc *, uint64, uint64);
 int             uvmrealloc(struct proc *, uint64);
+int 						cowpage(struct proc *, uint64 addr);
 int             uvmdealloc(struct proc *, uint64, uint64);
 int             uvmcopy(struct proc *, struct proc *);
 int             uaddrvalid(struct proc *, uint64);

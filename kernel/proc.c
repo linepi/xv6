@@ -400,10 +400,6 @@ growproc(int n)
   heap_end = p->addrinfo.heap_end;
   if(n > 0){
     if (heap_end + n > p->addrinfo.stack_bottom) return -1;
-    if((PGROUNDUP(heap_end) != PGROUNDUP(heap_end + n)) && 
-        uvmalloc(p, heap_end, heap_end + n) == -1) {
-      return -1;
-    }
   } else if(n < 0){
     if (heap_end + n > heap_end || heap_end + n < p->addrinfo.heap_start) return -1;
     if((PGROUNDUP(heap_end) != PGROUNDUP(heap_end + n)) && 

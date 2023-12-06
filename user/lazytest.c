@@ -22,8 +22,9 @@ sparse_memory(char *s)
   }
   new_end = prev_end + REGION_SZ;
 
-  for (i = prev_end + PGSIZE; i < new_end; i += 64 * PGSIZE)
+  for (i = prev_end + PGSIZE; i < new_end; i += 64 * PGSIZE) {
     *(char **)i = i;
+  }
 
   for (i = prev_end + PGSIZE; i < new_end; i += 64 * PGSIZE) {
     if (*(char **)i != i) {

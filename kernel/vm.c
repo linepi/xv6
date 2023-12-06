@@ -214,9 +214,8 @@ upageunmap(pagetable_t pagetable, uint64 va, uint64 npages, int do_free)
 
   for(a = va; a < va + npages*PGSIZE; a += PGSIZE){
     if((pte = walk(pagetable, a, 0)) == 0)
-      panic("upageunmap: walk");
+      continue;
     if((*pte & PTE_V) == 0) {
-      printf("[warning]upageunmap: not mapped\n");
       continue;
     }
     if(PTE_FLAGS(*pte) == PTE_V)
@@ -326,6 +325,17 @@ uvmrealloc(struct proc *p, uint64 addr)
   return 0;
 }
 
+int 
+cowpage(struct proc *p, uint64 addr)
+{
+  pte_t *pte;
+  if((pte = walk(p->pagetable, addr, 0)) == 0)
+    return 0;
+  if(*pte & PTE_COW)
+    return 1;
+  return 0;
+}
+
 // Deallocate user pages to bring the process size from old_addr to
 // new_addr. oldsz and newsz need not be page-aligned.
 // Returns deallocated page number or -1 on error. 
@@ -408,14 +418,14 @@ uvmcopy(struct proc *father, struct proc *child)
   for (idx = 0; idx < 3; idx++) {
     for(i = start_addrs[idx]; i < end_addrs[idx]; i += PGSIZE){
       if((father_pte = walk(father->pagetable, i, 0)) == 0)
-        panic("uvmcopy: pte should exist");
+        continue;
       if((*father_pte & PTE_V) == 0)
-        panic("uvmcopy: page not present");
+        continue;
 
       if((father_kpte = walk(father->kpagetable, i, 0)) == 0)
-        panic("uvmcopy: pte should exist");
+        continue;
       if((*father_kpte & PTE_V) == 0)
-        panic("uvmcopy: page not present");
+        continue;
 
       assert(PTE2PA(*father_pte) == PTE2PA(*father_kpte));
       pa = PTE2PA(*father_pte);
@@ -453,13 +463,13 @@ uvmcopy(struct proc *father, struct proc *child)
   for (; idx >= 0; idx--) {
     for(j = start_addrs[idx]; j < (idx == idx_start ? i : end_addrs[idx]); j += PGSIZE){
       if((father_pte = walk(father->pagetable, j, 0)) == 0)
-        panic("uvmcopy: pte should exist");
+        continue;
       if((*father_pte & PTE_V) == 0)
-        panic("uvmcopy: page not present");
+        continue;
       if((father_kpte = walk(father->kpagetable, j, 0)) == 0)
-        panic("uvmcopy: pte should exist");
+        continue;
       if((*father_kpte & PTE_V) == 0)
-        panic("uvmcopy: page not present");
+        continue;
       assert(PTE2PA(*father_pte) == PTE2PA(*father_kpte));
 
       if ((*father_pte) & PTE_COW) {
