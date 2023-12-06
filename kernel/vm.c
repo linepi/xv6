@@ -315,6 +315,8 @@ uvmrealloc(struct proc *p, uint64 addr)
     acquire_page_ref();
     inc_page_ref((uint64)pa, -1);
     release_page_ref();
+  } else if (get_page_ref((uint64)pa) < 1) {
+    printf("[warning] page_ref < 1\n");
   }
 
   *pte &= ~PTE_COW;     

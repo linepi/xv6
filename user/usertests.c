@@ -2663,7 +2663,7 @@ ugetpidtest()
 {
   for (int i = 0; i < 64; i++) {
     int ret = fork();
-    if (ret == 0) {
+    if (ret != 0) {
       wait(&ret);
       if (ret != 0)
         exit(1);
@@ -2931,7 +2931,7 @@ main(int argc, char *argv[])
     {forktest, "forktest"},
     {bigdir, "bigdir"}, // slow
     {ugetpidtest, "ugetpid"}, 
-    {pgaccesstest, "pgaccesstest"}, 
+    {pgaccesstest, "pgaccess"}, 
     // {badwrite, "badwrite" },
     // {writebig, "writebig"},
     { 0, 0},
