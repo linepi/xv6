@@ -227,8 +227,8 @@ proc_kpagetable(struct proc *p)
       break;
     }
   }
-  if (i == NELEM(kpagetable_pool)) // not found
-    return 0;
+  if (i == NELEM(kpagetable_pool)) 
+    goto bad;
   
   // map the trapframe just below TRAMPOLINE, for trampoline.S.
   if(mappages(kpw->page, TRAPFRAME, PGSIZE, (uint64)(p->trapframe), PTE_R | PTE_W) < 0){

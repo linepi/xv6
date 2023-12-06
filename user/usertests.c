@@ -2856,14 +2856,6 @@ main(int argc, char *argv[])
   char *from = 0;
   int from_start = 0;
 
-  int count_free = 1;
-  for (int i = 0; i < argc; i++) {
-    if (strcmp(argv[i], "--count-free") == 0) {
-      count_free = 1;
-      break;
-    }
-  }
-
   if(argc == 3 && strcmp(argv[1], "--from") == 0){
     from = argv[2];
     printf("Test from %s\n", from);
@@ -2947,9 +2939,7 @@ main(int argc, char *argv[])
 
   printf("usertests starting\n");
   int start = uptime();
-  if (count_free) {
-    print_free();
-  }
+  print_free();
   int fail = 0;
   for (struct test *t = tests; t->s != 0; t++) {
     int torun = 0;
@@ -2966,9 +2956,6 @@ main(int argc, char *argv[])
       if (!run(t->f, t->s))
         fail = 1;
     }
-  }
-  if (count_free) {
-    print_free();
   }
   int end = uptime();
   printf("consume %d time\n", end - start);

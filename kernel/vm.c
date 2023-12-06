@@ -305,15 +305,17 @@ uvmrealloc(struct proc *p, uint64 addr)
   assert(PTE2PA(*kpte) == PTE2PA(*pte));
   pa = PTE2PA(*pte);
 
-  char *mem = kalloc();
-  if (mem == 0)
-    return -1;
-  memmove(mem, (void *)pa, PGSIZE);
-  *pte = PA2PTE(mem) | PTE_FLAGS(*pte);
-  *kpte = PA2PTE(mem) | PTE_FLAGS(*kpte);
-  acquire_page_ref();
-  inc_page_ref((uint64)pa, -1);
-  release_page_ref();
+  if (get_page_ref((uint64)pa) > 1) {
+    char *mem = kalloc();
+    if (mem == 0)
+      return -1;
+    memmove(mem, (void *)pa, PGSIZE);
+    *pte = PA2PTE(mem) | PTE_FLAGS(*pte);
+    *kpte = PA2PTE(mem) | PTE_FLAGS(*kpte);
+    acquire_page_ref();
+    inc_page_ref((uint64)pa, -1);
+    release_page_ref();
+  }
 
   *pte &= ~PTE_COW;     
   *pte |= PTE_W;
@@ -642,7 +644,7 @@ _vmprint(pagetable_t pagetable, int level, int k){
       if (pte & PTE_A) printf("A");
       if (pte & PTE_COW) printf("C");
       printf("]");
-      printf(" pa 0x%lx(ref:%d)\n", child, inc_page_ref(child, 0));
+      printf(" pa 0x%lx(ref:%d)\n", child, get_page_ref(child));
       if((pte & (PTE_R|PTE_W|PTE_X)) == 0){
         // this PTE points to a lower-level page table.
         vmprint_buf[level - 1] = i;
@@ -726,5 +728,5 @@ print_pte_info(pagetable_t pagetable, uint64 va)
   if (pte & PTE_A) printf("A");
   if (pte & PTE_COW) printf("C");
   printf("]");  
-  printf(" pa 0x%lx(ref:%d)\n", PTE2PA(pte), inc_page_ref(PTE2PA(pte), 0));
+  printf(" pa 0x%lx(ref:%d)\n", PTE2PA(pte), get_page_ref(PTE2PA(pte)));
 }

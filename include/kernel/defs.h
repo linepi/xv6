@@ -65,8 +65,9 @@ void*           kalloc(void);
 void            kfree(void *);
 void            kinit(void);
 int 						kmemleft();
-int             inc_page_ref(uint64 addr, int cnt);
-int             chg_page_ref(uint64 addr, int to);
+void            inc_page_ref(uint64 addr, int cnt);
+void            chg_page_ref(uint64 addr, int to);
+int             get_page_ref(uint64 addr);
 void 						acquire_page_ref();
 void						release_page_ref();
 

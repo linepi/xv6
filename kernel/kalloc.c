@@ -76,7 +76,7 @@ kfree(void *pa)
   }
 
   acquire(&kpage_ref.lock);
-  int page_ref = inc_page_ref((uint64)pa, 0);
+  int page_ref = get_page_ref((uint64)pa);
   if (page_ref <= 0) {
     printf("[warning] kfree free page with ref <= 0\n");
     release(&kpage_ref.lock);
@@ -88,6 +88,8 @@ kfree(void *pa)
   if (page_ref == 1) { // actually free
     // Fill with junk to catch dangling refs.
     memset(pa, 1, PGSIZE);
+    // if (kmem.inited)
+      // printf("kfree: 0x%lx\n", pa);
     acquire(&kmem.lock);
     r->next = kmem.freelist;
     kmem.freelist = r;
@@ -113,6 +115,7 @@ kalloc(void)
 
   if(r) {
     memset((char*)r, 5, PGSIZE); // fill with junk
+    // printf("kalloc: 0x%lx\n", r);
     acquire(&kpage_ref.lock);
     chg_page_ref((uint64)r, 1);
     release(&kpage_ref.lock);
@@ -149,11 +152,11 @@ release_page_ref()
   release(&kpage_ref.lock);
 }
 
-int 
+void 
 inc_page_ref(uint64 addr, int cnt)
 {
   if (addr < kmem.start || (uint64)addr >= PHYSTOP)
-    return 0;
+    return;
   int idx = (PGROUNDDOWN(addr) - kmem.start) / PGSIZE;
   int cur = kpage_ref.v[idx];
   if (cnt > 0 && cur + cnt > 255) 
@@ -161,15 +164,20 @@ inc_page_ref(uint64 addr, int cnt)
   if (cnt < 0 && cur + cnt < 0)
     panic("dec page_ref");
   kpage_ref.v[idx] += cnt;
-  return cur;
 }
 
-int 
+void 
 chg_page_ref(uint64 addr, int to)
 {
   if (addr < kmem.start || (uint64)addr >= PHYSTOP)
-    return 0;
-  int before = inc_page_ref(addr, 0);
-  inc_page_ref(addr, to - before);
-  return before;
+    return;
+  int idx = (PGROUNDDOWN(addr) - kmem.start) / PGSIZE;
+  kpage_ref.v[idx] = to;
+}
+
+int 
+get_page_ref(uint64 addr)
+{
+  int idx = (PGROUNDDOWN(addr) - kmem.start) / PGSIZE;
+  return kpage_ref.v[idx];
 }
