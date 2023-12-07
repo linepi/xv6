@@ -69,10 +69,12 @@ usertrap(void)
     if (uaddrvalid(p, stval)) {
       if (cowpage(p, stval)) { // this is copy on write
         if (uvmrealloc(p, PGROUNDDOWN(stval)) != 0) {
+          printf("out of memory for cow(pid=%d sepc=0x%lx)\n", p->pid, r_sepc());
           p->killed = 1;
         }
       } else { // may lazy
         if (uvmalloc(p, PGROUNDDOWN(stval), PGROUNDDOWN(stval) + PGSIZE) == -1) {
+          printf("out of memory for lazy(pid=%d sepc=0x%lx)\n", p->pid, r_sepc());
           p->killed = 1;
         }
       }
@@ -164,10 +166,12 @@ kerneltrap()
     if (uaddrvalid(p, stval)) {
       if (cowpage(p, stval)) { // this is copy on write
         if (uvmrealloc(p, PGROUNDDOWN(stval)) != 0) {
+          printf("out of memory for cow(pid=%d sepc=0x%lx)\n", p->pid, r_sepc());
           p->killed = 1;
         }
       } else { // may lazy
         if (uvmalloc(p, PGROUNDDOWN(stval), PGROUNDDOWN(stval) + PGSIZE) == -1) {
+          printf("out of memory for lazy(pid=%d sepc=0x%lx)\n", p->pid, r_sepc());
           p->killed = 1;
         }
       }
