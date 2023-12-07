@@ -1,6 +1,8 @@
-struct stat;
-struct rtcdate;
-struct system_info;
+#pragma once
+#include "kernel/types.h"
+#include "kernel/stat.h"
+#include "kernel/date.h"
+#include "user/system.h"
 
 // system calls
 int fork(void);

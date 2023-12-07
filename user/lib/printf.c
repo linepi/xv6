@@ -102,7 +102,7 @@ vprintf(int fd, const char *fmt, va_list ap)
         if(c == 'd'){
           printlong(fd, va_arg(ap, long), 10, 1);
         } else if(c == 'x'){
-          printlong(fd, va_arg(ap, long), 16, 1);
+          printlong(fd, va_arg(ap, long), 16, 0);
         } else {
           // If it is not %ld or %lx, print the 'l' and treat the next character as a new format specifier
           putc(fd, 'l');

@@ -2481,32 +2481,6 @@ void argptest(char *s)
   close(fd);
 }
 
-// check that there's an invalid page beneath
-// the user stack, to catch stack overflow.
-void
-stacktest(char *s)
-{
-  int pid;
-  int xstatus;
-  
-  pid = fork();
-  if(pid == 0) {
-    char *sp = (char *) r_sp();
-    sp -= PGSIZE;
-    // the *sp should cause a trap.
-    printf("%s: stacktest: read below stack %p\n", s, *sp);
-    exit(1);
-  } else if(pid < 0){
-    printf("%s: fork failed\n", s);
-    exit(1);
-  }
-  wait(&xstatus);
-  if(xstatus == -1)  // kernel killed child?
-    exit(0);
-  else
-    exit(xstatus);
-}
-
 // regression test. copyin(), copyout(), and copyinstr() used to cast
 // the virtual page address to uint, which (with certain wild system
 // call arguments) resulted in a kernel page faults.
@@ -2739,6 +2713,56 @@ execout(char *s)
   exit(0);
 }
 
+
+int 
+_recursion_sum(int *array, int size, int idx) 
+{
+  if (idx < size)
+    return array[idx] + _recursion_sum(array, size, idx + 1);
+  else 
+    return 0;
+}
+
+void 
+stackoverflow()
+{
+  int pid = fork();
+  if (pid < 0) {
+    printf("fork failed\n");
+    exit(1);
+  } else if (pid == 0) {
+    int size = 10000000;
+    int array[size];
+    _recursion_sum(array, size, 0); // will bump stack, then killed by kernel
+    exit(0); // unexpected
+  } 
+
+  int exit_id;
+  wait(&exit_id);
+  if (exit_id != -1) {
+    exit(1);
+  } else {
+    exit(0);
+  }
+}
+
+void 
+recursion()
+{
+  for (int size = 10000; size < 100000; size += 100) {
+    int array[size];
+    int sum = 0;
+    for (int i = 0; i < size; i++) {
+      array[i] = i;
+      sum += i;
+    }
+    if (sum != _recursion_sum(array, size, 0)) {
+      exit(1);
+    }
+  }
+  exit(0);
+}
+
 //
 // use sbrk() to count how many free physical memory pages there are.
 // touches the pages to force allocation.
@@ -2911,7 +2935,6 @@ main(int argc, char *argv[])
     {sbrkarg, "sbrkarg"},
     {sbrklast, "sbrklast"},
     {validatetest, "validatetest"},
-    {stacktest, "stacktest"},
     {opentest, "opentest"},
     {writetest, "writetest"},
     {createtest, "createtest"},
@@ -2932,6 +2955,8 @@ main(int argc, char *argv[])
     {bigdir, "bigdir"}, // slow
     {ugetpidtest, "ugetpid"}, 
     {pgaccesstest, "pgaccess"}, 
+    {recursion, "recursion"},
+    {stackoverflow, "stackoverflow"},
     // {badwrite, "badwrite" },
     // {writebig, "writebig"},
     { 0, 0},

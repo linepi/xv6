@@ -1,4 +1,4 @@
-# .SILENT:
+.SILENT:
 K=kernel
 U=user
 MEMORY=128
@@ -25,7 +25,7 @@ OBJCOPY = $(TOOLPREFIX)objcopy
 OBJDUMP = $(TOOLPREFIX)objdump
 
 CFLAGS = -Wall -Werror -O0 -fno-omit-frame-pointer -ggdb3
-CFLAGS += -MD -Wno-infinite-recursion
+CFLAGS += -MD -Wno-infinite-recursion -Wno-unused-function
 CFLAGS += -DMEMORY_SIZE_MEGABYTES=$(MEMORY)
 CFLAGS += -mcmodel=medany
 CFLAGS += -ffreestanding -fno-common -nostdlib -mno-relax

@@ -13,7 +13,7 @@ extern char trampoline[], uservec[], userret[];
 
 // in kernelvec.S, calls kerneltrap().
 void kernelvec();
-
+void do_page_fault(struct proc *p, uint64 stval);
 extern int devintr();
 
 void
@@ -65,23 +65,7 @@ usertrap(void)
 
     syscall();
   } else if (r_scause() == 13 || r_scause() == 15) { // store or load page fault 
-    uint64 stval = r_stval();
-    if (uaddrvalid(p, stval)) {
-      if (cowpage(p, stval)) { // this is copy on write
-        if (uvmrealloc(p, PGROUNDDOWN(stval)) != 0) {
-          printf("out of memory for cow(pid=%d sepc=0x%lx)\n", p->pid, r_sepc());
-          p->killed = 1;
-        }
-      } else { // may lazy
-        if (uvmalloc(p, PGROUNDDOWN(stval), PGROUNDDOWN(stval) + PGSIZE) == -1) {
-          printf("out of memory for lazy(pid=%d sepc=0x%lx)\n", p->pid, r_sepc());
-          p->killed = 1;
-        }
-      }
-    } else {
-      printf("segmentation fault on 0x%lx(pid=%d sepc=0x%lx)\n", stval, p->pid, r_sepc());
-      p->killed = 1;
-    }
+    do_page_fault(p, r_stval());
   } else if((which_dev = devintr()) != 0){
     // ok
   } else {
@@ -162,23 +146,7 @@ kerneltrap()
     panic("kerneltrap: interrupts enabled");
 
   if (r_scause() == 13 || r_scause() == 15) { // store or load page fault 
-    uint64 stval = r_stval();
-    if (uaddrvalid(p, stval)) {
-      if (cowpage(p, stval)) { // this is copy on write
-        if (uvmrealloc(p, PGROUNDDOWN(stval)) != 0) {
-          printf("out of memory for cow(pid=%d sepc=0x%lx)\n", p->pid, r_sepc());
-          p->killed = 1;
-        }
-      } else { // may lazy
-        if (uvmalloc(p, PGROUNDDOWN(stval), PGROUNDDOWN(stval) + PGSIZE) == -1) {
-          printf("out of memory for lazy(pid=%d sepc=0x%lx)\n", p->pid, r_sepc());
-          p->killed = 1;
-        }
-      }
-    } else {
-      printf("segmentation fault on 0x%lx(pid=%d sepc=0x%lx)\n", stval, p->pid, r_sepc());
-      p->killed = 1;
-    }
+    do_page_fault(p, r_stval());
   } else if((which_dev = devintr()) == 0){
     printf("scause %p\n", scause);
     printf("sepc=%p stval=%p\n", r_sepc(), r_stval());
@@ -254,3 +222,54 @@ devintr()
   }
 }
 
+static void 
+pre_freeproc(struct proc *p)
+{
+  if(p->trapframe)
+    kfree((void*)p->trapframe);
+  p->trapframe = 0;
+  if(p->usyscall)
+    kfree((void*)p->usyscall);
+  p->usyscall = 0;
+  proc_free_pagetable(p);
+  proc_free_kpagetable(p, 0);
+}
+
+void 
+do_page_fault(struct proc *p, uint64 stval)
+{
+  // if sp below the stack bottom, set it 
+  if (p->addrinfo.stack_bottom > PGROUNDDOWN(p->trapframe->sp)) {
+    p->addrinfo.stack_bottom = PGROUNDDOWN(p->trapframe->sp);
+  }
+  if (uaddrvalid(p, stval)) {
+    if (cowpage(p, stval)) { // this is copy on write
+      if (uvmrealloc(p, PGROUNDDOWN(stval)) != 0) {
+        printf("out of memory for cow(stval=0x%lx pid=%d sepc=0x%lx)\n", stval, p->pid, r_sepc());
+        pre_freeproc(p); // pre free proc
+        p->killed = 1;
+      }
+    } else if (stval >= PROC_HEAP_BASE(p) && stval < PROC_HEAP_END(p)) { // lazy
+      if (uvmalloc(p, PGROUNDDOWN(stval), PGROUNDDOWN(stval) + PGSIZE) == -1) {
+        printf("out of memory for lazy(stval=0x%lx pid=%d sepc=0x%lx)\n", stval, p->pid, r_sepc());
+        pre_freeproc(p); // pre free proc
+        p->killed = 1;
+      }
+    } else if (stval >= PROC_STACK_BASE(p) && stval < PROC_STACK_END(p)) { // stack grows down
+      // lazy deal stack grows, only alloc memory that triggers page fault.
+      // tag stack_bottom to minimum stack address, such that all allocated memory can be
+      // freed in freeproc stage.
+      if (uvmalloc(p, PGROUNDDOWN(stval), PGROUNDDOWN(stval) + PGSIZE) == -1) {
+        printf("out of memory for stack(stval=0x%lx pid=%d sepc=0x%lx)\n", stval, p->pid, r_sepc());
+        pre_freeproc(p); // pre free proc
+        p->killed = 1;
+      }
+    } else {
+      printf("segmentation fault on valid 0x%lx(pid=%d sepc=0x%lx)\n", stval, p->pid, r_sepc());
+      p->killed = 1;
+    }
+  } else {
+    printf("segmentation fault on invalid 0x%lx(pid=%d sepc=0x%lx)\n", stval, p->pid, r_sepc());
+    p->killed = 1;
+  }
+}
