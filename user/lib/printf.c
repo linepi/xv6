@@ -68,6 +68,32 @@ printlong(int fd, long num, int base, int sign) {
   }
 }
 
+static void
+printx64(int fd, uint64 x)
+{
+  int i, notzero = 0;
+  for (i = 0; i < (sizeof(uint64) * 2); i++, x <<= 4) {
+    char c = digits[x >> (sizeof(uint64) * 8 - 4)];
+    if (c != '0')
+      notzero = 1;
+    if (!(c == '0' && notzero == 0))
+      putc(fd, c);
+  }
+}
+
+static void
+printx32(int fd, uint32 x)
+{
+  int i, notzero = 0;
+  for (i = 0; i < (sizeof(uint32) * 2); i++, x <<= 4) {
+    char c = digits[x >> (sizeof(uint32) * 8 - 4)];
+    if (c != '0')
+      notzero = 1;
+    if (!(c == '0' && notzero == 0))
+      putc(fd, c);
+  }
+}
+
 
 static void
 printptr(int fd, uint64 x) {
@@ -102,14 +128,14 @@ vprintf(int fd, const char *fmt, va_list ap)
         if(c == 'd'){
           printlong(fd, va_arg(ap, long), 10, 1);
         } else if(c == 'x'){
-          printlong(fd, va_arg(ap, long), 16, 0);
+          printx64(fd, va_arg(ap, uint64));
         } else {
           // If it is not %ld or %lx, print the 'l' and treat the next character as a new format specifier
           putc(fd, 'l');
           i--; // The next iteration will handle the format specifier
         }
       } else if(c == 'x') {
-        printint(fd, va_arg(ap, int), 16, 0);
+        printx32(fd, va_arg(ap, uint32));
       } else if(c == 'p') {
         printptr(fd, va_arg(ap, uint64));
       } else if(c == 's'){

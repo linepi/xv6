@@ -6,6 +6,7 @@
 #include "kernel/proc.h"
 #include "kernel/syscall.h"
 #include "kernel/defs.h"
+#include "common/color.h"
 
 // Fetch the uint64 at addr from the current process.
 int
@@ -109,10 +110,14 @@ syscall(void)
 
   num = p->trapframe->a7; 
   if(num > 0 && num < NELEM(syscalls) && syscalls[num]) {
-    p->trapframe->a0 = syscalls[num]();  
+    uint64 ret = syscalls[num](); 
     // strace
     if ((1 << num) & p->trace_mask)
-      printf("%d: syscall %s -> %d\n", p->pid, syscalls_name[num], p->trapframe->a0);
+      printf(ANSI_FMT("pid %d: %s(0x%lx, 0x%lx, 0x%lx) -> %d\n", ANSI_FG_CYAN), p->pid, syscalls_name[num], 
+        p->trapframe->a0,
+        p->trapframe->a1,
+        p->trapframe->a2, ret);
+    p->trapframe->a0 = ret;
   } else {
     printf("%d %s: unknown sys call %d\n", p->pid, p->name, num);
     p->trapframe->a0 = -1;

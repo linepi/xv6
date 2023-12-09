@@ -1,4 +1,5 @@
 #include "user/user.h"
+
 int 
 _recursion_sum(int *array, int size, int idx) 
 {
@@ -10,16 +11,7 @@ _recursion_sum(int *array, int size, int idx)
 
 int main()
 {
-	for (int size = 10000; size < 100000; size += 100) {
-    int array[size];
-    int sum = 0;
-    for (int i = 0; i < size; i++) {
-      array[i] = i;
-      sum += i;
-    }
-    if (sum != _recursion_sum(array, size, 0)) {
-      exit(1);
-    }
-  }
+  int x = 0x80000000;
+  printf("%x %x %x\n", x, x + 1, x - 1);
 	exit(0);
 }

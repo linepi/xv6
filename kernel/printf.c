@@ -85,6 +85,32 @@ printptr(uint64 x)
     consputc(digits[x >> (sizeof(uint64) * 8 - 4)]);
 }
 
+static void
+printx64(uint64 x)
+{
+  int i, notzero = 0;
+  for (i = 0; i < (sizeof(uint64) * 2); i++, x <<= 4) {
+    char c = digits[x >> (sizeof(uint64) * 8 - 4)];
+    if (c != '0')
+      notzero = 1;
+    if (!(c == '0' && notzero == 0))
+      consputc(c);
+  }
+}
+
+static void
+printx32(uint32 x)
+{
+  int i, notzero = 0;
+  for (i = 0; i < (sizeof(uint32) * 2); i++, x <<= 4) {
+    char c = digits[x >> (sizeof(uint32) * 8 - 4)];
+    if (c != '0')
+      notzero = 1;
+    if (!(c == '0' && notzero == 0))
+      consputc(c);
+  }
+}
+
 // Print to the console. only understands %d, %x, %p, %s.
 void
 printf(char *fmt, ...)
@@ -114,14 +140,14 @@ printf(char *fmt, ...)
       printint(va_arg(ap, int), 10, 1);
       break;
     case 'x':
-      printint(va_arg(ap, int), 16, 0);
+      printx32(va_arg(ap, uint32));
       break;
     case 'l':
       c = fmt[++i] & 0xff; // Get the next character after 'l'
       if(c == 'd'){
         printlong(va_arg(ap, long), 10, 1);
       } else if(c == 'x'){
-        printlong(va_arg(ap, long), 16, 1);
+        printx64(va_arg(ap, uint64));
       } else {
         // If it is not %ld or %lx, print the 'l' and treat the next character as a new format specifier
         consputc('l');
