@@ -11,7 +11,8 @@ _recursion_sum(int *array, int size, int idx)
 
 int main()
 {
-  int x = 0x80000000;
-  printf("%x %x %x\n", x, x + 1, x - 1);
+  char buf[300];
+  sprintf(buf, "%x %d %s", -1L, 34, "fdsag");
+  printf("%s\n", buf);
 	exit(0);
 }

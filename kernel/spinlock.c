@@ -11,7 +11,7 @@
 void
 initlock(struct spinlock *lk, char *name)
 {
-  lk->name = name;
+  strncpy(lk->name, name, sizeof(lk->name));
   lk->locked = 0;
   lk->cpu = 0;
 }
@@ -23,7 +23,7 @@ acquire(struct spinlock *lk)
 {
   push_off(); // disable interrupts to avoid deadlock.
   if(holding(lk))
-    panic("acquire");
+    panic("acquire holding lock \"%s\"", lk->name);
 
   // On RISC-V, sync_lock_test_and_set turns into an atomic swap:
   //   a5 = 1
@@ -47,7 +47,7 @@ void
 release(struct spinlock *lk)
 {
   if(!holding(lk))
-    panic("release");
+    panic("release not holding lock \"%s\"", lk->name);
 
   lk->cpu = 0;
 

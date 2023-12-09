@@ -39,7 +39,9 @@ procinit(void)
   initlock(&wait_lock, "wait_lock");
   initlock(&kpool_lock, "kpool_lock");
   for(p = proc; p < &proc[NPROC]; p++) {
-    initlock(&p->lock, "proc");
+    char buf[10];
+    sprintf(buf, "proc %d", (int)(p - proc));
+    initlock(&p->lock, buf);
     p->kstackbase = KSTACK((int) (p - proc));
     // this page is for kernel stack, which will not be freed while OS running.
     p->kstackpage = kalloc();

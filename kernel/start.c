@@ -8,7 +8,7 @@ void main();
 void timerinit();
 
 // entry.S needs one stack per CPU.
-__attribute__ ((aligned (16))) char stack0[PGSIZE * NCPU];
+__attribute__ ((aligned (16))) char stack0[2 * PGSIZE * NCPU];
 
 // a scratch area per CPU for machine-mode timer interrupts.
 uint64 timer_scratch[NCPU][5];

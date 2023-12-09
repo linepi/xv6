@@ -14,6 +14,7 @@
 #include "kernel/riscv.h"
 #include "kernel/defs.h"
 #include "kernel/proc.h"
+#include "common/color.h"
 
 volatile int panicked = 0;
 
@@ -113,9 +114,8 @@ printx32(uint32 x)
 
 // Print to the console. only understands %d, %x, %p, %s.
 void
-printf(char *fmt, ...)
+vprintf(const char *fmt, va_list ap)
 {
-  va_list ap;
   int i, c, locking;
   char *s;
 
@@ -126,7 +126,6 @@ printf(char *fmt, ...)
   if (fmt == 0)
     panic("null fmt");
 
-  va_start(ap, fmt);
   for(i = 0; (c = fmt[i] & 0xff) != 0; i++){
     if(c != '%'){
       consputc(c);
@@ -179,12 +178,24 @@ printf(char *fmt, ...)
 }
 
 void
-panic(char *s)
+printf(const char *fmt, ...)
+{
+  va_list ap;
+
+  va_start(ap, fmt);
+  vprintf(fmt, ap);
+}
+
+void
+panic(const char *fmt, ...)
 {
   pr.locking = 0;
-  printf("panic: ");
-  printf(s);
-  printf("\n");
+  printf(ANSI_FMT("panic: ", ANSI_FG_RED));
+  va_list ap;
+  va_start(ap, fmt);
+  vprintf(fmt, ap);
+  printf(ANSI_FMT("\nsome info: \n", ANSI_FG_CYAN));
+  procdump();
   panicked = 1; // freeze uart output from other CPUs
   for(;;)
     ;

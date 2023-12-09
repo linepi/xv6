@@ -47,3 +47,5 @@ int atoi(const char*);
 int memcmp(const void *, const void *, uint);
 void *memcpy(void *, const void *, uint);
 int ugetpid(void);
+int snprintf(char* str, uint64 size, const char* format, ...);
+int sprintf(char *str, const char *format, ...);

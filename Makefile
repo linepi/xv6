@@ -1,4 +1,3 @@
-.SILENT:
 K=kernel
 U=user
 MEMORY=128
@@ -89,7 +88,7 @@ $U/_forktest: $U/forktest.o $(U_LIB_OBJS)
 
 build/mkfs: mkfs/mkfs.c include/kernel/fs.h include/kernel/param.h
 	@echo "$(ANSI_FG_GREEN)+ CC $(ANSI_NONE)$@"
-	gcc -Werror -Wall -Iinclude -o $@ mkfs/mkfs.c
+	gcc -Werror -Wall -Iinclude -g -o $@ mkfs/mkfs.c
 
 $(FS_IMG): build/mkfs README $(U_PROGS)
 	@echo "$(ANSI_FG_GREEN)+ $@ $(ANSI_NONE)"

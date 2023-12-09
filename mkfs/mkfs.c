@@ -4,6 +4,7 @@
 #include <string.h>
 #include <fcntl.h>
 #include <assert.h>
+#include <errno.h>
 
 #define stat xv6_stat  // avoid clash with host struct stat
 #include "kernel/types.h"
@@ -296,6 +297,10 @@ iappend(uint inum, void *xp, int n)
 void
 die(const char *s)
 {
-  perror(s);
+  if (errno != 0)
+    perror(s);
+  else
+    printf("error: %s\n", s);
+  remove("build/fs.img");
   exit(1);
 }

@@ -83,9 +83,11 @@ void            pipeclose(struct pipe*, int);
 int             piperead(struct pipe*, uint64, int);
 int             pipewrite(struct pipe*, uint64, int);
 
-// printf.c
-void            printf(char*, ...);
-void            panic(char*) __attribute__((noreturn));
+// printf.c & sprintf.c
+int 						snprintf(char* str, uint64 size, const char* format, ...);
+int 						sprintf(char* str, const char* format, ...);
+void            printf(const char*, ...);
+void            panic(const char*, ...) __attribute__((noreturn));
 void            assert(int);
 void            printfinit(void);
 void            backtrace(void);
