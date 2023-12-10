@@ -86,9 +86,9 @@ $U/_forktest: $U/forktest.o $(U_LIB_OBJS)
 	$(LD) $(LDFLAGS) -N -e main -o $U/_forktest $U/forktest.o $U/ulib.o $U/usys.o
 	$(OBJDUMP) -S $U/_forktest > $U/forktest.asm
 
-build/mkfs: mkfs/mkfs.c include/kernel/fs.h include/kernel/param.h
+build/mkfs: tools/mkfs.c include/kernel/fs.h include/kernel/param.h
 	@echo "$(ANSI_FG_GREEN)+ CC $(ANSI_NONE)$@"
-	gcc -Werror -Wall -Iinclude -g -o $@ mkfs/mkfs.c
+	gcc -Werror -Wall -Iinclude -g -o $@ tools/mkfs.c
 
 $(FS_IMG): build/mkfs README $(U_PROGS) $(K_OBJ_DIR)/kernel
 	@echo "$(ANSI_FG_GREEN)+ $@ $(ANSI_NONE)"
