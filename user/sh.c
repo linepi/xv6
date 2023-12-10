@@ -3,6 +3,8 @@
 #include "kernel/types.h"
 #include "user/user.h"
 #include "kernel/fcntl.h"
+#include "kernel/param.h"
+#include "common/color.h"
 
 // Parsed command representation
 #define EXEC  1
@@ -10,8 +12,10 @@
 #define PIPE  3
 #define LIST  4
 #define BACK  5
-
 #define MAXARGS 10
+
+char cwd[MAXPATH] = "/";
+int laststate;
 
 struct cmd {
   int type;
@@ -51,7 +55,7 @@ struct backcmd {
 
 int fork1(void);  // Fork but panics on failure.
 void panic(char*);
-struct cmd *parsecmd(char*);
+struct cmd *paread_blockmd(char*);
 
 // Execute cmd.  Never returns.
 void
@@ -75,9 +79,9 @@ runcmd(struct cmd *cmd)
     ecmd = (struct execcmd*)cmd;
     if(ecmd->argv[0] == 0)
       exit(1);
-    exec(ecmd->argv[0], ecmd->argv);
+    int ret = exec(ecmd->argv[0], ecmd->argv);
     fprintf(2, "exec %s failed\n", ecmd->argv[0]);
-    break;
+    exit(ret);
 
   case REDIR:
     rcmd = (struct redircmd*)cmd;
@@ -133,11 +137,36 @@ runcmd(struct cmd *cmd)
 int
 getcmd(char *buf, int nbuf)
 {
-  fprintf(2, "$ ");
+  if (laststate == 0)
+    fprintf(2,  ANSI_FMT("√", ANSI_FG_GREEN));
+  else 
+    fprintf(2, ANSI_FMT("%d", ANSI_FG_RED), laststate); 
+  fprintf(2, ANSI_FMT(" %s", ANSI_FG_BLUE) " # ", cwd);
   memset(buf, 0, nbuf);
   gets(buf, nbuf);
   if(buf[0] == 0) // EOF
     return -1;
+  return 0;
+}
+
+// return 1 if built_in
+// else return 0
+int
+built_in(char *buf) 
+{
+  if (buf[0] == 'c' && buf[1] == 'd' && buf[2] == ' ') {
+    // Chdir must be called by the parent, not the child.
+    buf[strlen(buf)-1] = 0;  // chop \n
+    if(chdir(buf+3) < 0)
+      fprintf(2, "cannot cd %s\n", buf+3);
+    if (getcwd(cwd, MAXPATH) == 0) {
+      fprintf(2, "getcwd error\n");
+    }
+    return 1;
+  } else if (buf[0] == 'p' && buf[1] == 'w' && buf[2] == 'd') {
+    printf("%s\n", cwd);
+    return 1;
+  }
   return 0;
 }
 
@@ -157,16 +186,11 @@ main(void)
 
   // Read and run input commands.
   while(getcmd(buf, sizeof(buf)) >= 0){
-    if(buf[0] == 'c' && buf[1] == 'd' && buf[2] == ' '){
-      // Chdir must be called by the parent, not the child.
-      buf[strlen(buf)-1] = 0;  // chop \n
-      if(chdir(buf+3) < 0)
-        fprintf(2, "cannot cd %s\n", buf+3);
+    if (built_in(buf) == 1) 
       continue;
-    }
     if(fork1() == 0)
-      runcmd(parsecmd(buf));
-    wait(0);
+      runcmd(paread_blockmd(buf));
+    wait(&laststate);
   }
   exit(0);
 }
@@ -325,7 +349,7 @@ struct cmd *parseexec(char**, char*);
 struct cmd *nulterminate(struct cmd*);
 
 struct cmd*
-parsecmd(char *s)
+paread_blockmd(char *s)
 {
   char *es;
   struct cmd *cmd;

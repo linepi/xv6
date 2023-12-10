@@ -30,11 +30,11 @@ struct superblock sb;
 static void
 readsb(int dev, struct superblock *sb)
 {
-  struct buf *bp;
+  struct block_buf *bp;
 
   bp = bread(dev, 1);
   memmove(sb, bp->data, sizeof(*sb));
-  brelse(bp);
+  brelease(bp);
 }
 
 // Init fs
@@ -50,12 +50,12 @@ fsinit(int dev) {
 static void
 bzero(int dev, int bno)
 {
-  struct buf *bp;
+  struct block_buf *bp;
 
   bp = bread(dev, bno);
-  memset(bp->data, 0, BSIZE);
+  memset(bp->data, 0, BLOCK_SIZE);
   log_write(bp);
-  brelse(bp);
+  brelease(bp);
 }
 
 // Blocks.
@@ -65,22 +65,22 @@ static uint
 balloc(uint dev)
 {
   int b, bi, m;
-  struct buf *bp;
+  struct block_buf *bp;
 
   bp = 0;
-  for(b = 0; b < sb.size; b += BPB){
-    bp = bread(dev, BBLOCK(b, sb));
-    for(bi = 0; bi < BPB && b + bi < sb.size; bi++){
+  for(b = 0; b < sb.size; b += BIT_PER_BLOCK){
+    bp = bread(dev, BITMAP_BLOCK(b, sb));
+    for(bi = 0; bi < BIT_PER_BLOCK && b + bi < sb.size; bi++){
       m = 1 << (bi % 8);
       if((bp->data[bi/8] & m) == 0){  // Is block free?
         bp->data[bi/8] |= m;  // Mark block in use.
         log_write(bp);
-        brelse(bp);
+        brelease(bp);
         bzero(dev, b + bi);
         return b + bi;
       }
     }
-    brelse(bp);
+    brelease(bp);
   }
   panic("balloc: out of blocks");
 }
@@ -89,17 +89,17 @@ balloc(uint dev)
 static void
 bfree(int dev, uint b)
 {
-  struct buf *bp;
+  struct block_buf *bp;
   int bi, m;
 
-  bp = bread(dev, BBLOCK(b, sb));
-  bi = b % BPB;
+  bp = bread(dev, BITMAP_BLOCK(b, sb));
+  bi = b % BIT_PER_BLOCK;
   m = 1 << (bi % 8);
   if((bp->data[bi/8] & m) == 0)
     panic("freeing free block");
   bp->data[bi/8] &= ~m;
   log_write(bp);
-  brelse(bp);
+  brelease(bp);
 }
 
 // Inodes.
@@ -196,20 +196,20 @@ struct inode*
 ialloc(uint dev, short type)
 {
   int inum;
-  struct buf *bp;
+  struct block_buf *bp;
   struct dinode *dip;
 
   for(inum = 1; inum < sb.ninodes; inum++){
-    bp = bread(dev, IBLOCK(inum, sb));
-    dip = (struct dinode*)bp->data + inum%IPB;
+    bp = bread(dev, INODE_BLOCK(inum, sb));
+    dip = (struct dinode*)bp->data + inum%INODES_PER_BLOCK;
     if(dip->type == 0){  // a free inode
       memset(dip, 0, sizeof(*dip));
       dip->type = type;
       log_write(bp);   // mark it allocated on the disk
-      brelse(bp);
+      brelease(bp);
       return iget(dev, inum);
     }
-    brelse(bp);
+    brelease(bp);
   }
   panic("ialloc: no inodes");
 }
@@ -221,11 +221,11 @@ ialloc(uint dev, short type)
 void
 iupdate(struct inode *ip)
 {
-  struct buf *bp;
+  struct block_buf *bp;
   struct dinode *dip;
 
-  bp = bread(ip->dev, IBLOCK(ip->inum, sb));
-  dip = (struct dinode*)bp->data + ip->inum%IPB;
+  bp = bread(ip->dev, INODE_BLOCK(ip->inum, sb));
+  dip = (struct dinode*)bp->data + ip->inum%INODES_PER_BLOCK;
   dip->type = ip->type;
   dip->major = ip->major;
   dip->minor = ip->minor;
@@ -233,7 +233,7 @@ iupdate(struct inode *ip)
   dip->size = ip->size;
   memmove(dip->addrs, ip->addrs, sizeof(ip->addrs));
   log_write(bp);
-  brelse(bp);
+  brelease(bp);
 }
 
 // Find the inode with number inum on device dev
@@ -288,7 +288,7 @@ idup(struct inode *ip)
 void
 ilock(struct inode *ip)
 {
-  struct buf *bp;
+  struct block_buf *bp;
   struct dinode *dip;
 
   if(ip == 0 || ip->ref < 1)
@@ -297,15 +297,15 @@ ilock(struct inode *ip)
   acquiresleep(&ip->lock);
 
   if(ip->valid == 0){
-    bp = bread(ip->dev, IBLOCK(ip->inum, sb));
-    dip = (struct dinode*)bp->data + ip->inum%IPB;
+    bp = bread(ip->dev, INODE_BLOCK(ip->inum, sb));
+    dip = (struct dinode*)bp->data + ip->inum%INODES_PER_BLOCK;
     ip->type = dip->type;
     ip->major = dip->major;
     ip->minor = dip->minor;
     ip->nlink = dip->nlink;
     ip->size = dip->size;
     memmove(ip->addrs, dip->addrs, sizeof(ip->addrs));
-    brelse(bp);
+    brelease(bp);
     ip->valid = 1;
     if(ip->type == 0)
       panic("ilock: no type");
@@ -378,7 +378,7 @@ static uint
 bmap(struct inode *ip, uint bn)
 {
   uint addr, *a;
-  struct buf *bp;
+  struct block_buf *bp;
 
   if(bn < NDIRECT){
     if((addr = ip->addrs[bn]) == 0)
@@ -397,7 +397,7 @@ bmap(struct inode *ip, uint bn)
       a[bn] = addr = balloc(ip->dev);
       log_write(bp);
     }
-    brelse(bp);
+    brelease(bp);
     return addr;
   }
 
@@ -410,7 +410,7 @@ void
 itrunc(struct inode *ip)
 {
   int i, j;
-  struct buf *bp;
+  struct block_buf *bp;
   uint *a;
 
   for(i = 0; i < NDIRECT; i++){
@@ -427,7 +427,7 @@ itrunc(struct inode *ip)
       if(a[j])
         bfree(ip->dev, a[j]);
     }
-    brelse(bp);
+    brelease(bp);
     bfree(ip->dev, ip->addrs[NDIRECT]);
     ip->addrs[NDIRECT] = 0;
   }
@@ -456,7 +456,7 @@ int
 readi(struct inode *ip, int user_dst, uint64 dst, uint off, uint n)
 {
   uint tot, m;
-  struct buf *bp;
+  struct block_buf *bp;
 
   if(off > ip->size || off + n < off)
     return 0;
@@ -464,14 +464,14 @@ readi(struct inode *ip, int user_dst, uint64 dst, uint off, uint n)
     n = ip->size - off;
 
   for(tot=0; tot<n; tot+=m, off+=m, dst+=m){
-    bp = bread(ip->dev, bmap(ip, off/BSIZE));
-    m = min(n - tot, BSIZE - off%BSIZE);
-    if(either_copyout(user_dst, dst, bp->data + (off % BSIZE), m) == -1) {
-      brelse(bp);
+    bp = bread(ip->dev, bmap(ip, off/BLOCK_SIZE));
+    m = min(n - tot, BLOCK_SIZE - off%BLOCK_SIZE);
+    if(either_copyout(user_dst, dst, bp->data + (off % BLOCK_SIZE), m) == -1) {
+      brelease(bp);
       tot = -1;
       break;
     }
-    brelse(bp);
+    brelease(bp);
   }
   return tot;
 }
@@ -487,22 +487,22 @@ int
 writei(struct inode *ip, int user_src, uint64 src, uint off, uint n)
 {
   uint tot, m;
-  struct buf *bp;
+  struct block_buf *bp;
 
   if(off > ip->size || off + n < off)
     return -1;
-  if(off + n > MAXFILE*BSIZE)
+  if(off + n > MAXFILE*BLOCK_SIZE)
     return -1;
 
   for(tot=0; tot<n; tot+=m, off+=m, src+=m){
-    bp = bread(ip->dev, bmap(ip, off/BSIZE));
-    m = min(n - tot, BSIZE - off%BSIZE);
-    if(either_copyin(bp->data + (off % BSIZE), user_src, src, m) == -1) {
-      brelse(bp);
+    bp = bread(ip->dev, bmap(ip, off/BLOCK_SIZE));
+    m = min(n - tot, BLOCK_SIZE - off%BLOCK_SIZE);
+    if(either_copyin(bp->data + (off % BLOCK_SIZE), user_src, src, m) == -1) {
+      brelease(bp);
       break;
     }
     log_write(bp);
-    brelse(bp);
+    brelease(bp);
   }
 
   if(off > ip->size)

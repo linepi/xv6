@@ -1,5 +1,5 @@
 #pragma once
-struct buf;
+struct block_buf;
 struct context;
 struct file;
 struct inode;
@@ -12,11 +12,11 @@ struct superblock;
 
 // bio.c
 void            binit(void);
-struct buf*     bread(uint, uint);
-void            brelse(struct buf*);
-void            bwrite(struct buf*);
-void            bpin(struct buf*);
-void            bunpin(struct buf*);
+struct block_buf*     bread(uint, uint);
+void            brelease(struct block_buf*);
+void            bwrite(struct block_buf*);
+void            bpin(struct block_buf*);
+void            bunpin(struct block_buf*);
 
 // console.c
 void            consoleinit(void);
@@ -58,7 +58,7 @@ void            itrunc(struct inode*);
 // ramdisk.c
 void            ramdiskinit(void);
 void            ramdiskintr(void);
-void            ramdiskrw(struct buf*);
+void            ramdiskrw(struct block_buf*);
 
 // kalloc.c
 void*           kalloc(void);
@@ -73,7 +73,7 @@ void						release_page_ref();
 
 // log.c
 void            initlog(int, struct superblock*);
-void            log_write(struct buf*);
+void            log_write(struct block_buf*);
 void            begin_op(void);
 void            end_op(void);
 
@@ -213,7 +213,7 @@ void            plic_complete(int);
 
 // virtio_disk.c
 void            virtio_disk_init(void);
-void            virtio_disk_rw(struct buf *, int);
+void            virtio_disk_rw(struct block_buf *, int);
 void            virtio_disk_intr(void);
 
 // others

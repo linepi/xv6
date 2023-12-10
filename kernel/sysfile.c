@@ -413,6 +413,17 @@ sys_chdir(void)
 }
 
 uint64
+sys_getcwd(void)
+{
+  char path[MAXPATH];
+  int size;
+  if (argstr(0, path, MAXPATH) < 0 || argint(1, &size) < 0) {
+    return 0;
+  }
+  return 0;
+}
+
+uint64
 sys_exec(void)
 {
   char path[MAXPATH], *argv[MAXARG];

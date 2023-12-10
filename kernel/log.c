@@ -54,7 +54,7 @@ static void commit();
 void
 initlog(int dev, struct superblock *sb)
 {
-  if (sizeof(struct logheader) >= BSIZE)
+  if (sizeof(struct logheader) >= BLOCK_SIZE)
     panic("initlog: too big logheader");
 
   initlock(&log.lock, "log");
@@ -71,14 +71,14 @@ install_trans(int recovering)
   int tail;
 
   for (tail = 0; tail < log.lh.n; tail++) {
-    struct buf *lbuf = bread(log.dev, log.start+tail+1); // read log block
-    struct buf *dbuf = bread(log.dev, log.lh.block[tail]); // read dst
-    memmove(dbuf->data, lbuf->data, BSIZE);  // copy block to dst
+    struct block_buf *lbuf = bread(log.dev, log.start+tail+1); // read log block
+    struct block_buf *dbuf = bread(log.dev, log.lh.block[tail]); // read dst
+    memmove(dbuf->data, lbuf->data, BLOCK_SIZE);  // copy block to dst
     bwrite(dbuf);  // write dst to disk
     if(recovering == 0)
       bunpin(dbuf);
-    brelse(lbuf);
-    brelse(dbuf);
+    brelease(lbuf);
+    brelease(dbuf);
   }
 }
 
@@ -86,14 +86,14 @@ install_trans(int recovering)
 static void
 read_head(void)
 {
-  struct buf *buf = bread(log.dev, log.start);
+  struct block_buf *buf = bread(log.dev, log.start);
   struct logheader *lh = (struct logheader *) (buf->data);
   int i;
   log.lh.n = lh->n;
   for (i = 0; i < log.lh.n; i++) {
     log.lh.block[i] = lh->block[i];
   }
-  brelse(buf);
+  brelease(buf);
 }
 
 // Write in-memory log header to disk.
@@ -102,7 +102,7 @@ read_head(void)
 static void
 write_head(void)
 {
-  struct buf *buf = bread(log.dev, log.start);
+  struct block_buf *buf = bread(log.dev, log.start);
   struct logheader *hb = (struct logheader *) (buf->data);
   int i;
   hb->n = log.lh.n;
@@ -110,7 +110,7 @@ write_head(void)
     hb->block[i] = log.lh.block[i];
   }
   bwrite(buf);
-  brelse(buf);
+  brelease(buf);
 }
 
 static void
@@ -181,12 +181,12 @@ write_log(void)
   int tail;
 
   for (tail = 0; tail < log.lh.n; tail++) {
-    struct buf *to = bread(log.dev, log.start+tail+1); // log block
-    struct buf *from = bread(log.dev, log.lh.block[tail]); // cache block
-    memmove(to->data, from->data, BSIZE);
+    struct block_buf *to = bread(log.dev, log.start+tail+1); // log block
+    struct block_buf *from = bread(log.dev, log.lh.block[tail]); // cache block
+    memmove(to->data, from->data, BLOCK_SIZE);
     bwrite(to);  // write the log
-    brelse(from);
-    brelse(to);
+    brelease(from);
+    brelease(to);
   }
 }
 
@@ -210,9 +210,9 @@ commit()
 //   bp = bread(...)
 //   modify bp->data[]
 //   log_write(bp)
-//   brelse(bp)
+//   brelease(bp)
 void
-log_write(struct buf *b)
+log_write(struct block_buf *b)
 {
   int i;
 

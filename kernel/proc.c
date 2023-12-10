@@ -798,7 +798,7 @@ procdump(void)
   char *state;
 
   printf("\n");
-  printf("pid state  name pages\n");
+  printf("pid  state  proc          pages\n");
   for(p = proc; p < &proc[NPROC]; p++){
     if(p->state == UNUSED)
       continue;
@@ -806,7 +806,17 @@ procdump(void)
       state = states[p->state];
     else
       state = "???";
-    printf("%d %s %s %d", p->pid, state, p->name, PROC_PAGES(p));
+
+    printf("%d    %s", p->pid, state);
+    for (int i = 0; i < 7 - strlen(state); i++)
+      consputc(' ');
+    printf("%s", p->path);
+    if (strlen(p->path) >= 14) consputc(' ');
+    else {
+      for (int i = 0; i < 14 - strlen(p->path); i++)
+        consputc(' ');
+    }
+    printf("%d", PROC_PAGES(p));
     printf("\n");
   }
 }

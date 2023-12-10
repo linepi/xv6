@@ -3,6 +3,7 @@
 #define NCPU          8  // maximum number of CPUs
 #define NOFILE       16  // open files per process
 #define NFILE       100  // open files per system
+#define NINODES 		200  // number of inodes
 #define NINODE       50  // maximum number of active i-nodes
 #define NDEV         10  // maximum major device number
 #define ROOTDEV       1  // device number of file system root disk

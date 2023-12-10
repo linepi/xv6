@@ -3,7 +3,8 @@
 
 
 #define ROOTINO  1   // root i-number
-#define BSIZE 1024  // block size
+#define FSMAGIC 0x10203040
+#define BLOCK_SIZE 1024  // block size
 
 // Disk layout:
 // [ boot block | super block | log | inode blocks |
@@ -14,18 +15,19 @@
 struct superblock {
   uint magic;        // Must be FSMAGIC
   uint size;         // Size of file system image (blocks)
-  uint nblocks;      // Number of data blocks
-  uint ninodes;      // Number of inodes.
-  uint nlog;         // Number of log blocks
   uint logstart;     // Block number of first log block
+  uint nlog;         // Number of log blocks
   uint inodestart;   // Block number of first inode block
+  uint ninodes;      // Number of inodes.
+  uint ninode_block; // Number of inodes blocks.
   uint bmapstart;    // Block number of first free map block
+  uint nbmap;        // Number of free map block
+  uint datastart;    // Block number of first data block
+  uint ndata;        // Number of data blocks
 };
 
-#define FSMAGIC 0x10203040
-
 #define NDIRECT 12
-#define NINDIRECT (BSIZE / sizeof(uint))
+#define NINDIRECT (BLOCK_SIZE / sizeof(uint))
 #define MAXFILE (NDIRECT + NINDIRECT)
 
 // On-disk inode structure
@@ -39,16 +41,16 @@ struct dinode {
 };
 
 // Inodes per block.
-#define IPB           (BSIZE / sizeof(struct dinode))
+#define INODES_PER_BLOCK           (BLOCK_SIZE / sizeof(struct dinode))
 
 // Block containing inode i
-#define IBLOCK(i, sb)     ((i) / IPB + sb.inodestart)
+#define INODE_BLOCK(i, sb)     ((i) / INODES_PER_BLOCK + sb.inodestart)
 
 // Bitmap bits per block
-#define BPB           (BSIZE*8)
+#define BIT_PER_BLOCK           (BLOCK_SIZE*8)
 
 // Block of free map containing bit for block b
-#define BBLOCK(b, sb) ((b)/BPB + sb.bmapstart)
+#define BITMAP_BLOCK(blockno, sb) ((blockno)/BIT_PER_BLOCK + sb.bmapstart)
 
 // Directory is a file containing a sequence of dirent structures.
 #define DIRSIZ 14

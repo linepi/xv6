@@ -8,8 +8,8 @@
 // Interface:
 // * To get a buffer for a particular disk block, call bread.
 // * After changing buffer data, call bwrite to write it to disk.
-// * When done with the buffer, call brelse.
-// * Do not use the buffer after calling brelse.
+// * When done with the buffer, call brelease.
+// * Do not use the buffer after calling brelease.
 // * Only one process at a time can use a buffer,
 //     so do not keep them longer than necessary.
 
@@ -24,18 +24,18 @@
 
 struct {
   struct spinlock lock;
-  struct buf buf[NBUF];
+  struct block_buf buf[NBUF];
 
   // Linked list of all buffers, through prev/next.
   // Sorted by how recently the buffer was used.
   // head.next is most recent, head.prev is least.
-  struct buf head;
+  struct block_buf head;
 } bcache;
 
 void
 binit(void)
 {
-  struct buf *b;
+  struct block_buf *b;
 
   initlock(&bcache.lock, "bcache");
 
@@ -54,10 +54,10 @@ binit(void)
 // Look through buffer cache for block on device dev.
 // If not found, allocate a buffer.
 // In either case, return locked buffer.
-static struct buf*
+static struct block_buf*
 bget(uint dev, uint blockno)
 {
-  struct buf *b;
+  struct block_buf *b;
 
   acquire(&bcache.lock);
 
@@ -88,10 +88,10 @@ bget(uint dev, uint blockno)
 }
 
 // Return a locked buf with the contents of the indicated block.
-struct buf*
+struct block_buf*
 bread(uint dev, uint blockno)
 {
-  struct buf *b;
+  struct block_buf *b;
 
   b = bget(dev, blockno);
   if(!b->valid) {
@@ -103,7 +103,7 @@ bread(uint dev, uint blockno)
 
 // Write b's contents to disk.  Must be locked.
 void
-bwrite(struct buf *b)
+bwrite(struct block_buf *b)
 {
   if(!holdingsleep(&b->lock))
     panic("bwrite");
@@ -113,10 +113,10 @@ bwrite(struct buf *b)
 // Release a locked buffer.
 // Move to the head of the most-recently-used list.
 void
-brelse(struct buf *b)
+brelease(struct block_buf *b)
 {
   if(!holdingsleep(&b->lock))
-    panic("brelse");
+    panic("brelease");
 
   releasesleep(&b->lock);
 
@@ -136,14 +136,14 @@ brelse(struct buf *b)
 }
 
 void
-bpin(struct buf *b) {
+bpin(struct block_buf *b) {
   acquire(&bcache.lock);
   b->refcnt++;
   release(&bcache.lock);
 }
 
 void
-bunpin(struct buf *b) {
+bunpin(struct block_buf *b) {
   acquire(&bcache.lock);
   b->refcnt--;
   release(&bcache.lock);

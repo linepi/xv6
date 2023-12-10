@@ -16,30 +16,28 @@
 #define static_assert(a, b) do { switch (0) case 0: case (a): ; } while (0)
 #endif
 
-#define NINODES 200
 
 // Disk layout:
 // [ boot block | sb block | log | inode blocks | free bit map | data blocks ]
 
-int nbitmap = FSSIZE/(BSIZE*8) + 1;
-int ninodeblocks = NINODES / IPB + 1;
+int nbitmap = FSSIZE/(BLOCK_SIZE*8) + 1;
+int ninodeblocks = NINODES / INODES_PER_BLOCK + 1;
 int nlog = LOGSIZE;
 int nmeta;    // Number of meta blocks (boot, sb, nlog, inode, bitmap)
-int nblocks;  // Number of data blocks
+int ndata;  // Number of data blocks
 
 int fsfd;
 struct superblock sb;
-char zeroes[BSIZE];
-uint freeinode = 1;
+char zeroes[BLOCK_SIZE];
 uint freeblock;
 
 
-void balloc(int);
-void wsect(uint, void*);
+void bitmap_alloc(int);
+void write_block(uint, void*);
 void winode(uint, struct dinode*);
 void rinode(uint inum, struct dinode *ip);
-void rsect(uint sec, void *buf);
-uint ialloc(ushort type);
+void read_block(uint sec, void *buf);
+uint inode_alloc(ushort type);
 void iappend(uint inum, void *p, int n);
 void die(const char *);
 
@@ -70,9 +68,9 @@ int
 main(int argc, char *argv[])
 {
   int i, cc, fd;
-  uint rootino, inum, off;
-  struct dirent de;
-  char buf[BSIZE];
+  uint root_inode_no, inum, off;
+  struct dirent dir;
+  char buf[BLOCK_SIZE];
   struct dinode din;
 
 
@@ -83,8 +81,8 @@ main(int argc, char *argv[])
     exit(1);
   }
 
-  assert((BSIZE % sizeof(struct dinode)) == 0);
-  assert((BSIZE % sizeof(struct dirent)) == 0);
+  assert((BLOCK_SIZE % sizeof(struct dinode)) == 0);
+  assert((BLOCK_SIZE % sizeof(struct dirent)) == 0);
 
   fsfd = open(argv[1], O_RDWR|O_CREAT|O_TRUNC, 0666);
   if(fsfd < 0)
@@ -92,47 +90,54 @@ main(int argc, char *argv[])
 
   // 1 fs block = 1 disk sector
   nmeta = 2 + nlog + ninodeblocks + nbitmap;
-  nblocks = FSSIZE - nmeta;
-
-  sb.magic = FSMAGIC;
-  sb.size = xint(FSSIZE);
-  sb.nblocks = xint(nblocks);
-  sb.ninodes = xint(NINODES);
-  sb.nlog = xint(nlog);
-  sb.logstart = xint(2);
-  sb.inodestart = xint(2+nlog);
-  sb.bmapstart = xint(2+nlog+ninodeblocks);
+  ndata = FSSIZE - nmeta;
 
   printf("nmeta %d (boot, super, log blocks %u inode blocks %u, bitmap blocks %u) blocks %d total %d\n",
-         nmeta, nlog, ninodeblocks, nbitmap, nblocks, FSSIZE);
+         nmeta, nlog, ninodeblocks, nbitmap, ndata, FSSIZE);
 
   freeblock = nmeta;     // the first free block that we can allocate
 
+  // fill all block with zero
   for(i = 0; i < FSSIZE; i++)
-    wsect(i, zeroes);
+    write_block(i, zeroes);
 
+  // write superblock
+  sb.magic = FSMAGIC;
+  sb.size = xint(FSSIZE);
+  sb.logstart = xint(2);
+  sb.nlog = xint(nlog);
+  sb.inodestart = xint(2+nlog);
+  sb.ninodes = xint(NINODES);
+  sb.ninode_block = xint(ninodeblocks);
+  sb.bmapstart = xint(2+nlog+ninodeblocks);
+  sb.nbmap = xint(nbitmap);
+  sb.datastart = xint(2+nlog+ninodeblocks+nbitmap);
+  sb.ndata = xint(ndata);
   memset(buf, 0, sizeof(buf));
   memmove(buf, &sb, sizeof(sb));
-  wsect(1, buf);
+  write_block(1, buf);
 
-  rootino = ialloc(T_DIR);
-  assert(rootino == ROOTINO);
+  // alloc root inode and append '.', '..' dir
+  root_inode_no = inode_alloc(T_DIR);
+  assert(root_inode_no == ROOTINO);
 
-  bzero(&de, sizeof(de));
-  de.inum = xshort(rootino);
-  strcpy(de.name, ".");
-  iappend(rootino, &de, sizeof(de));
+  bzero(&dir, sizeof(dir));
+  dir.inum = xshort(root_inode_no);
+  strcpy(dir.name, ".");
+  iappend(root_inode_no, &dir, sizeof(dir));
 
-  bzero(&de, sizeof(de));
-  de.inum = xshort(rootino);
-  strcpy(de.name, "..");
-  iappend(rootino, &de, sizeof(de));
+  bzero(&dir, sizeof(dir));
+  dir.inum = xshort(root_inode_no);
+  strcpy(dir.name, "..");
+  iappend(root_inode_no, &dir, sizeof(dir));
 
   for(i = 2; i < argc; i++){
     // get rid of "user/"
     char *shortname;
     if(strncmp(argv[i], "build/user/", 11) == 0)
       shortname = argv[i] + 11;
+    else if (strncmp(argv[i], "build/kernel/", 13) == 0)
+      shortname = argv[i] + 13;
     else
       shortname = argv[i];
     
@@ -148,12 +153,12 @@ main(int argc, char *argv[])
     if(shortname[0] == '_')
       shortname += 1;
 
-    inum = ialloc(T_FILE);
+    inum = inode_alloc(T_FILE);
 
-    bzero(&de, sizeof(de));
-    de.inum = xshort(inum);
-    strncpy(de.name, shortname, DIRSIZ);
-    iappend(rootino, &de, sizeof(de));
+    bzero(&dir, sizeof(dir));
+    dir.inum = xshort(inum);
+    strncpy(dir.name, shortname, DIRSIZ);
+    iappend(root_inode_no, &dir, sizeof(dir));
 
     while((cc = read(fd, buf, sizeof(buf))) > 0)
       iappend(inum, buf, cc);
@@ -162,65 +167,73 @@ main(int argc, char *argv[])
   }
 
   // fix size of root inode dir
-  rinode(rootino, &din);
+  rinode(root_inode_no, &din);
   off = xint(din.size);
-  off = ((off/BSIZE) + 1) * BSIZE;
+  off = ((off/BLOCK_SIZE) + 1) * BLOCK_SIZE;
   din.size = xint(off);
-  winode(rootino, &din);
+  winode(root_inode_no, &din);
 
-  balloc(freeblock);
+  bitmap_alloc(freeblock);
 
   exit(0);
 }
 
+// write one block
 void
-wsect(uint sec, void *buf)
+write_block(uint sec, void *buf)
 {
-  if(lseek(fsfd, sec * BSIZE, 0) != sec * BSIZE)
+  if(lseek(fsfd, sec * BLOCK_SIZE, 0) != sec * BLOCK_SIZE)
     die("lseek");
-  if(write(fsfd, buf, BSIZE) != BSIZE)
+  if(write(fsfd, buf, BLOCK_SIZE) != BLOCK_SIZE)
     die("write");
 }
 
+// write new inode
+// @param inum: inode id, start from 1
+// @param ip: the inode to write
 void
 winode(uint inum, struct dinode *ip)
 {
-  char buf[BSIZE];
+  char buf[BLOCK_SIZE];
   uint bn;
   struct dinode *dip;
 
-  bn = IBLOCK(inum, sb);
-  rsect(bn, buf);
-  dip = ((struct dinode*)buf) + (inum % IPB);
+  bn = INODE_BLOCK(inum, sb);
+  read_block(bn, buf);
+  dip = ((struct dinode*)buf) + (inum % INODES_PER_BLOCK);
   *dip = *ip;
-  wsect(bn, buf);
+  write_block(bn, buf);
 }
 
+// read the inode
 void
 rinode(uint inum, struct dinode *ip)
 {
-  char buf[BSIZE];
+  char buf[BLOCK_SIZE];
   uint bn;
   struct dinode *dip;
 
-  bn = IBLOCK(inum, sb);
-  rsect(bn, buf);
-  dip = ((struct dinode*)buf) + (inum % IPB);
+  bn = INODE_BLOCK(inum, sb);
+  read_block(bn, buf);
+  dip = ((struct dinode*)buf) + (inum % INODES_PER_BLOCK);
   *ip = *dip;
 }
 
+// read one block
 void
-rsect(uint sec, void *buf)
+read_block(uint sec, void *buf)
 {
-  if(lseek(fsfd, sec * BSIZE, 0) != sec * BSIZE)
+  if(lseek(fsfd, sec * BLOCK_SIZE, SEEK_SET) != sec * BLOCK_SIZE)
     die("lseek");
-  if(read(fsfd, buf, BSIZE) != BSIZE)
+  if(read(fsfd, buf, BLOCK_SIZE) != BLOCK_SIZE)
     die("read");
 }
 
+// add a new inode with type
 uint
-ialloc(ushort type)
+inode_alloc(ushort type)
 {
+  static uint freeinode = 1;
   uint inum = freeinode++;
   struct dinode din;
 
@@ -233,30 +246,31 @@ ialloc(ushort type)
 }
 
 void
-balloc(int used)
+bitmap_alloc(int used)
 {
-  uchar buf[BSIZE];
+  uchar buf[BLOCK_SIZE];
   int i;
 
-  printf("balloc: first %d blocks have been allocated\n", used);
-  assert(used < BSIZE*8);
-  bzero(buf, BSIZE);
+  printf("bitmap_alloc: first %d blocks have been allocated\n", used);
+  assert(used < BLOCK_SIZE*8);
+  bzero(buf, BLOCK_SIZE);
   for(i = 0; i < used; i++){
     buf[i/8] = buf[i/8] | (0x1 << (i%8));
   }
-  printf("balloc: write bitmap block at sector %d\n", sb.bmapstart);
-  wsect(sb.bmapstart, buf);
+  printf("bitmap_alloc: write bitmap block at sector %d\n", sb.bmapstart);
+  write_block(sb.bmapstart, buf);
 }
 
 #define min(a, b) ((a) < (b) ? (a) : (b))
 
+// append buf into block inum
 void
-iappend(uint inum, void *xp, int n)
+iappend(uint inum, void *p_, int n)
 {
-  char *p = (char*)xp;
+  char *p = p_;
   uint fbn, off, n1;
   struct dinode din;
-  char buf[BSIZE];
+  char buf[BLOCK_SIZE];
   uint indirect[NINDIRECT];
   uint x;
 
@@ -264,7 +278,7 @@ iappend(uint inum, void *xp, int n)
   off = xint(din.size);
   // printf("append inum %d at off %d sz %d\n", inum, off, n);
   while(n > 0){
-    fbn = off / BSIZE;
+    fbn = off / BLOCK_SIZE;
     assert(fbn < MAXFILE);
     if(fbn < NDIRECT){
       if(xint(din.addrs[fbn]) == 0){
@@ -275,17 +289,17 @@ iappend(uint inum, void *xp, int n)
       if(xint(din.addrs[NDIRECT]) == 0){
         din.addrs[NDIRECT] = xint(freeblock++);
       }
-      rsect(xint(din.addrs[NDIRECT]), (char*)indirect);
+      read_block(xint(din.addrs[NDIRECT]), (char*)indirect);
       if(indirect[fbn - NDIRECT] == 0){
         indirect[fbn - NDIRECT] = xint(freeblock++);
-        wsect(xint(din.addrs[NDIRECT]), (char*)indirect);
+        write_block(xint(din.addrs[NDIRECT]), (char*)indirect);
       }
       x = xint(indirect[fbn-NDIRECT]);
     }
-    n1 = min(n, (fbn + 1) * BSIZE - off);
-    rsect(x, buf);
-    bcopy(p, buf + off - (fbn * BSIZE), n1);
-    wsect(x, buf);
+    n1 = min(n, (fbn + 1) * BLOCK_SIZE - off);
+    read_block(x, buf);
+    bcopy(p, buf + off - (fbn * BLOCK_SIZE), n1);
+    write_block(x, buf);
     n -= n1;
     off += n1;
     p += n1;

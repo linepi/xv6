@@ -61,7 +61,7 @@ static struct disk {
   // for use when completion interrupt arrives.
   // indexed by first descriptor index of chain.
   struct {
-    struct buf *b;
+    struct block_buf *b;
     char status;
   } info[NUM];
 
@@ -201,9 +201,9 @@ alloc3_desc(int *idx)
 }
 
 void
-virtio_disk_rw(struct buf *b, int write)
+virtio_disk_rw(struct block_buf *b, int write)
 {
-  uint64 sector = b->blockno * (BSIZE / 512);
+  uint64 sector = b->blockno * (BLOCK_SIZE / 512);
 
   acquire(&disk.vdisk_lock);
 
@@ -238,7 +238,7 @@ virtio_disk_rw(struct buf *b, int write)
   disk.desc[idx[0]].next = idx[1];
 
   disk.desc[idx[1]].addr = (uint64) b->data;
-  disk.desc[idx[1]].len = BSIZE;
+  disk.desc[idx[1]].len = BLOCK_SIZE;
   if(write)
     disk.desc[idx[1]].flags = 0; // device reads b->data
   else
@@ -252,7 +252,7 @@ virtio_disk_rw(struct buf *b, int write)
   disk.desc[idx[2]].flags = VRING_DESC_F_WRITE; // device writes the status
   disk.desc[idx[2]].next = 0;
 
-  // record struct buf for virtio_disk_intr().
+  // record struct block_buf for virtio_disk_intr().
   b->disk = 1;
   disk.info[idx[0]].b = b;
 
@@ -304,7 +304,7 @@ virtio_disk_intr()
     if(disk.info[id].status != 0)
       panic("virtio_disk_intr status");
 
-    struct buf *b = disk.info[id].b;
+    struct block_buf *b = disk.info[id].b;
     b->disk = 0;   // disk is done with buf
     wakeup(b);
 

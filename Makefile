@@ -90,9 +90,9 @@ build/mkfs: mkfs/mkfs.c include/kernel/fs.h include/kernel/param.h
 	@echo "$(ANSI_FG_GREEN)+ CC $(ANSI_NONE)$@"
 	gcc -Werror -Wall -Iinclude -g -o $@ mkfs/mkfs.c
 
-$(FS_IMG): build/mkfs README $(U_PROGS)
+$(FS_IMG): build/mkfs README $(U_PROGS) $(K_OBJ_DIR)/kernel
 	@echo "$(ANSI_FG_GREEN)+ $@ $(ANSI_NONE)"
-	build/mkfs $@ README $(U_PROGS)
+	build/mkfs $@ README $(U_PROGS) $(K_OBJ_DIR)/kernel
 
 -include $(K_OBJ_DIR)/*.d $(U_OBJ_DIR)/*.d
 

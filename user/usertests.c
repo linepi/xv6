@@ -18,7 +18,7 @@
 // prints "OK".
 //
 
-#define BUFSZ  ((MAXOPBLOCKS+2)*BSIZE)
+#define BUFSZ  ((MAXOPBLOCKS+2)*BLOCK_SIZE)
 
 char buf[BUFSZ];
 
@@ -583,7 +583,7 @@ writebig(char *s)
 
   for(i = 0; i < MAXFILE; i++){
     ((int*)buf)[0] = i;
-    if(write(fd, buf, BSIZE) != BSIZE){
+    if(write(fd, buf, BLOCK_SIZE) != BLOCK_SIZE){
       printf("%s: error: write big file failed\n", s, i);
       exit(1);
     }
@@ -599,14 +599,14 @@ writebig(char *s)
 
   n = 0;
   for(;;){
-    i = read(fd, buf, BSIZE);
+    i = read(fd, buf, BLOCK_SIZE);
     if(i == 0){
       if(n == MAXFILE - 1){
         printf("%s: read only %d blocks from big", s, n);
         exit(1);
       }
       break;
-    } else if(i != BSIZE){
+    } else if(i != BLOCK_SIZE){
       printf("%s: read failed %d\n", s, i);
       exit(1);
     }
@@ -1740,7 +1740,7 @@ bigwrite(char *s)
   int fd, sz;
 
   unlink("bigwrite");
-  for(sz = 499; sz < (MAXOPBLOCKS+2)*BSIZE; sz += 471){
+  for(sz = 499; sz < (MAXOPBLOCKS+2)*BLOCK_SIZE; sz += 471){
     fd = open("bigwrite", O_CREATE | O_RDWR);
     if(fd < 0){
       printf("%s: cannot create bigwrite\n", s);
@@ -2442,8 +2442,8 @@ fsfull()
     }
     int total = 0;
     while(1){
-      int cc = write(fd, buf, BSIZE);
-      if(cc < BSIZE)
+      int cc = write(fd, buf, BLOCK_SIZE);
+      if(cc < BLOCK_SIZE)
         break;
       total += cc;
       fsblocks++;

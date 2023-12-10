@@ -117,6 +117,7 @@ exec(char *path, char **argv)
   p->trapframe->a1 = sp;
 
   // Save program name for debugging.
+  safestrcpy(p_new.path, path, sizeof(p_new.path));
   for(last=s=path; *s; s++)
     if(*s == '/')
       last = s+1;
