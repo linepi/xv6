@@ -392,7 +392,6 @@ static int chdir(char *cwd, const char *to);
 uint64
 sys_chdir(void)
 {
-
   char path[MAXPATH];
   struct inode *ip;
   struct proc *p = myproc();
@@ -520,14 +519,14 @@ normalizePath(char *path) {
 
 static int 
 chdir(char *cwd, const char *to) {
-  char tempPath[MAXPATH]; 
+  char tempPath[MAXPATH * 2]; 
   if (to[0] == '/') {
     strcpy(tempPath, to);
   } else {
     sprintf(tempPath, "%s/%s", cwd, to);
   }
   normalizePath(tempPath);
-  if (strlen(tempPath) >= MAXPATH) {
+  if (strlen(tempPath) >= MAXPATH * 2) {
     return -1;
   }
   strcpy(cwd, tempPath);
