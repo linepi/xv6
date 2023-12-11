@@ -178,7 +178,7 @@ built_in(char *buf)
 }
 
 int
-main(void)
+main(int argc, char **argv)
 {
   static char buf[100];
   int fd;
@@ -191,14 +191,28 @@ main(void)
     }
   }
 
-  // Read and run input commands.
-  while(getcmd(buf, sizeof(buf)) >= 0){
+  if (argc == 1) {
+    // Read and run input commands.
+    while(getcmd(buf, sizeof(buf)) >= 0){
+      if (built_in(buf) == 1) 
+        continue;
+      if(fork1() == 0)
+        runcmd(paread_blockmd(buf));
+      wait(&laststate);
+    }
+  } else {
+    strcpy(buf, argv[1]);
+    for (int i = 2; i < argc; i++) {
+      strcat(buf, " ");
+      strcat(buf, argv[i]);
+    }
+
     if (built_in(buf) == 1) 
-      continue;
+      exit(0);
     if(fork1() == 0)
       runcmd(paread_blockmd(buf));
     wait(&laststate);
-  }
+  } 
   exit(0);
 }
 

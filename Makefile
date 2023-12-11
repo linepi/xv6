@@ -4,6 +4,7 @@ MEMORY=128
 
 TOOLPREFIX = riscv64-unknown-elf-
 FS_IMG = build/fs.img
+FS_IMG_FILES = README Makefile LICENSE $(U_PROGS) 
 
 QEMU = qemu-system-riscv64
 BUILD_DIR = build
@@ -24,7 +25,7 @@ OBJCOPY = $(TOOLPREFIX)objcopy
 OBJDUMP = $(TOOLPREFIX)objdump
 
 CFLAGS = -Wall -Werror -O0 -fno-omit-frame-pointer -ggdb3
-CFLAGS += -MD -Wno-infinite-recursion -Wno-unused-function
+CFLAGS += -MD -Wno-infinite-recursion -Wno-unused-function -Wno-unused-variable -Wno-unused-but-set-variable
 CFLAGS += -DMEMORY_SIZE_MEGABYTES=$(MEMORY)
 CFLAGS += -mcmodel=medany
 CFLAGS += -ffreestanding -fno-common -nostdlib -mno-relax
@@ -90,9 +91,9 @@ build/mkfs: tools/mkfs.c include/kernel/fs.h include/kernel/param.h
 	@echo "$(ANSI_FG_GREEN)+ CC $(ANSI_NONE)$@"
 	gcc -Werror -Wall -Iinclude -g -o $@ tools/mkfs.c
 
-$(FS_IMG): build/mkfs README $(U_PROGS) $(K_OBJ_DIR)/kernel
+$(FS_IMG): build/mkfs $(FS_IMG_FILES)
 	@echo "$(ANSI_FG_GREEN)+ $@ $(ANSI_NONE)"
-	build/mkfs $@ README $(U_PROGS) $(K_OBJ_DIR)/kernel
+	build/mkfs $@ $(FS_IMG_FILES)
 
 -include $(K_OBJ_DIR)/*.d $(U_OBJ_DIR)/*.d
 

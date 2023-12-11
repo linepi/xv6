@@ -2,6 +2,7 @@
 #include "kernel/stat.h"
 #include "kernel/fcntl.h"
 #include "kernel/riscv.h"
+#include "kernel/fs.h"
 #include "kernel/memlayout.h"
 #include "user/user.h"
 
@@ -74,6 +75,16 @@ strchr(const char *s, char c)
     if(*s == c)
       return (char*)s;
   return 0;
+}
+
+char*
+strrchr(const char *s, char c)
+{
+  char *ret = NULL;
+  for(; *s; s++)
+    if(*s == c)
+      ret = (char *)s;
+  return ret;
 }
 
 char*
@@ -171,4 +182,106 @@ getcwd(char *buf, int size)
 {
   struct usyscall *u = (struct usyscall *)USYSCALL;
   return strncpy(buf, u->cwd, MAXPATH);
+}
+
+// rm everything, using unlink
+static int
+rmdir_(char *path)
+{
+  struct stat st;
+  if (stat(path, &st) < 0) {
+    fprintf(2, "rmdir: %s failed to stat\n", path);
+    return -1;
+  }
+  if (st.type == T_FILE) {
+    if(unlink(path) < 0){
+      fprintf(2, "rmdir: %s failed to delete\n", path);
+      return -1;
+    }
+  } else if (st.type == T_DIR) {
+    int fd = open(path, O_RDONLY);
+    if (fd < 0) {
+      fprintf(2, "rmdir: open %s failed\n", path);
+      return -1;
+    }
+    struct dirent de;	
+    while(read(fd, &de, sizeof(de)) == sizeof(de)){
+      if(de.inum == 0)
+        continue;
+			if (strcmp(de.name, ".") == 0 || strcmp(de.name, "..") == 0) 
+				continue;
+      strcat(path, "/");
+      strcat(path, de.name);
+      int rc = rmdir_(path);
+      strrchr(path, '/')[0] = 0;
+      if (rc < 0) {
+        close(fd);
+        return -1;
+      }
+    }
+    close(fd);
+    if(unlink(path) < 0){
+      fprintf(2, "rmdir: %s failed to delete\n", path);
+      return -1;
+    }
+  }
+  return 0;
+}
+
+int
+rmdir(const char *path)
+{
+  char buf[MAXPATH];
+  strcpy(buf, path);
+  return rmdir_(buf);
+}
+
+char *
+strtok_r(char *s, const char *delim, char **last)
+{
+	char *spanp;
+	int c, sc;
+	char *tok;
+	if (s == NULL && (s = *last) == NULL)
+		return (NULL);
+	/*
+	 * Skip (span) leading delimiters (s += strspn(s, delim), sort of).
+	 */
+cont:
+	c = *s++;
+	for (spanp = (char *)delim; (sc = *spanp++) != 0;) {
+		if (c == sc)
+			goto cont;
+	}
+	if (c == 0) {		/* no non-delimiter characters */
+		*last = NULL;
+		return (NULL);
+	}
+	tok = s - 1;
+	/*
+	 * Scan token (scan for delimiters: s += strcspn(s, delim), sort of).
+	 * Note that delim must have one NUL; we stop if we see that, too.
+	 */
+	for (;;) {
+		c = *s++;
+		spanp = (char *)delim;
+		do {
+			if ((sc = *spanp++) == c) {
+				if (c == 0)
+					s = NULL;
+				else
+					s[-1] = 0;
+				*last = s;
+				return (tok);
+			}
+		} while (sc != 0);
+	}
+	/* NOTREACHED */
+}
+
+char *
+strtok(char *s, const char *delim)
+{
+	static char *last;
+	return strtok_r(s, delim, &last);
 }

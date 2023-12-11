@@ -26,17 +26,6 @@ exec(char *path, char **argv)
   p_new.kpagetable = 0;
   addrinfo_clear(p_new.addrinfo);
 
-  // debuging
-  // printf("%s called exec(\"%s\", [", p->name, path);
-  // for(char **i = &argv[1]; *i; i += sizeof(char*)){
-  //   printf("\"%s\"", *i);
-  //   if(*(i + sizeof(char*))){
-  //     printf(", ");
-  //   }
-  // }
-  // printf("])\n");
-  // debuging
-
   begin_op();
 
   if((ip = namei(path)) == 0){

@@ -1,5 +1,8 @@
 #include "kernel/types.h"
 #include "kernel/stat.h"
+#include "kernel/fcntl.h"
+#include "kernel/fs.h"
+#include "kernel/param.h"
 #include "user/user.h"
 
 int
@@ -13,11 +16,8 @@ main(int argc, char *argv[])
   }
 
   for(i = 1; i < argc; i++){
-    if(unlink(argv[i]) < 0){
-      fprintf(2, "rm: %s failed to delete\n", argv[i]);
-      break;
-    }
+    if (rmdir(argv[i]) < 0) 
+      exit(1);
   }
-
   exit(0);
 }

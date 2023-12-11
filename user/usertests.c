@@ -1,3 +1,4 @@
+#include <stdarg.h>
 #include "kernel/param.h"
 #include "kernel/types.h"
 #include "kernel/stat.h"
@@ -8,6 +9,7 @@
 #include "kernel/syscall.h"
 #include "kernel/memlayout.h"
 #include "kernel/riscv.h"
+#include "common/color.h"
 
 //
 // Tests xv6 system calls.  usertests without arguments runs them all
@@ -2763,6 +2765,164 @@ recursion()
   exit(0);
 }
 
+int
+cmd_wrapper(char* cmd, ...)
+{
+  va_list ap;
+  va_start(ap, cmd);
+
+  int pid = fork();
+  if (pid < 0) {
+    printf("fork failed\n");
+  } else if (pid == 0) {
+    char *args[MAXARG] = {cmd};
+    int idx = 1;
+    while (1) {
+      args[idx++] = va_arg(ap, char *);
+      if (args[idx - 1] == NULL)  
+        break;
+    }
+    int rc = exec(cmd, args);
+    exit(rc);
+  }
+  int state;
+  wait(&state);
+  return state;
+}
+
+// -1 for error, 0 for same
+int 
+cmpfile(char *file, char *file2)
+{
+  struct stat st1, st2;
+  if (stat(file, &st1) < 0) {
+    printf("cmpfile: stat %s error\n", file);
+    return -1;
+  }
+  if (stat(file2, &st2) < 0) {
+    printf("cmpfile: stat %s error\n", file2);
+    return -1;
+  }
+  if (st1.dev != st2.dev || st1.nlink != st2.nlink ||
+      st1.size != st2.size || st1.type != st2.type) {
+    printf("cmpfile: stat result not the same: (%d %d %d %d) and (%d %d %d %d)\n",
+      st1.dev, st1.nlink, st1.size, st1.type,
+      st2.dev, st2.nlink, st2.size, st2.type);
+    return -1;
+  }
+  
+
+  int fd1, fd2;
+  if ((fd2 = open(file2, O_RDONLY)) < 0) {
+    printf("cmpfile: open %s failed\n", file2);
+    return -1;
+  }
+  if ((fd1 = open(file, O_RDONLY)) < 0) {
+    printf("cmpfile: open %s failed\n", file);
+    close(fd2);
+    return -1;
+  }
+
+  char *buffer1 = malloc(st1.size);
+  char *buffer2 = malloc(st1.size);
+  if (read(fd1, buffer1, st1.size) != st1.size) {
+    goto dealloc;
+  }
+  if (read(fd2, buffer2, st1.size) != st1.size) {
+    goto dealloc;
+  }
+  if (memcmp(buffer1, buffer2, st1.size) != 0) {
+    goto dealloc;
+  }
+  return 0;
+dealloc:
+  free(buffer1);
+  free(buffer2);
+  close(fd1);
+  close(fd2);
+  return -1;
+}
+
+// assume program cp is in / dir
+void
+cptest(char *testname)
+{
+  // char *files[] = {"/LICENSE", "/Makefile", "/ls", "/init", 0};
+  char *files[] = {"/Makefile", "/ls", 0};
+  char dirname[MAXPATH] = "/1234";
+  char dirname2[MAXPATH] = "/4321";
+  int dir1 = 0, dir2 = 0;
+  char tmp1[MAXPATH];
+  char tmp2[MAXPATH];
+  int ret = 0;
+
+  for (int i = 0; files[i]; i++) {
+    char *file = files[i];
+    char file2[MAXPATH];
+    snprintf(file2, MAXPATH, "%s%d", file, 1);
+    if (cmd_wrapper("/cp", file, file2, NULL) != 0) {
+      printf("%s: cp failed\n", testname);
+      exit(1);
+    }
+    if (cmpfile(file, file2) != 0) {
+      printf("%s: cmpfile failed\n", testname);
+      exit(1);
+    }
+    if (unlink(file2) < 0) {
+      printf("%s: unlink failed\n", testname);
+      exit(1);
+    }
+  }
+
+  if (mkdir(dirname) < 0) {
+    printf("%s: mkdir error\n", testname);
+    exit(1);
+  }
+  dir1 = 1;
+
+  for (int i = 0; files[i]; i++) {
+    char *file = files[i];
+    if (cmd_wrapper("/cp", file, dirname, NULL) != 0) {
+      printf("%s: cp failed\n", testname);
+      ret = 1;
+      goto end;
+    }
+  }
+
+  if (cmd_wrapper("/cp", dirname, dirname2, NULL) != 0) {
+    printf("%s: cp failed\n", testname);
+    ret = 1;
+    goto end;
+  }
+
+  dir2 = 1;
+  for (int i = 0; files[i]; i++) {
+    snprintf(tmp1, MAXPATH, "%s/%s", dirname, files[i]);
+    snprintf(tmp2, MAXPATH, "%s/%s", dirname2, files[i]);
+    if (cmpfile(tmp1, tmp2) != 0) {
+      printf("%s: cmpfile failed\n", testname);
+      ret = 1;
+      goto end;
+    }
+  }
+
+end:
+  if (dir1 && rmdir(dirname) < 0) {
+    printf("%s: rmdir %s failed\n", testname, dirname);
+  }
+  if (dir2 && rmdir(dirname2) < 0) {
+    printf("%s: rmdir %s failed\n", testname, dirname);
+  }
+  exit(ret);
+}
+
+// assume program mv is in / dir
+void
+mvtest(char *testname)
+{
+
+}
+
 //
 // use sbrk() to count how many free physical memory pages there are.
 // touches the pages to force allocation.
@@ -2843,7 +3003,7 @@ countfree2()
 void 
 print_free()
 {
-  printf("memleft: %d\n", countfree2());
+  printf(ANSI_FMT("memleft: %d\n", ANSI_FG_CYAN), countfree2());
 }
 
 
@@ -2854,7 +3014,7 @@ run(void f(char *), char *s) {
   int pid;
   int xstatus;
 
-  printf("test %s: ", s);
+  printf(ANSI_FMT("[test %s]\n", ANSI_FG_YELLOW), s);
   if((pid = fork()) < 0) {
     printf("runtest: fork error\n");
     exit(1);
@@ -2865,9 +3025,9 @@ run(void f(char *), char *s) {
   } else {
     wait(&xstatus);
     if(xstatus != 0) 
-      printf("FAILED\n");
+      printf(ANSI_FMT("FAILED\n", ANSI_FG_RED));
     else
-      printf("OK\n");
+      printf(ANSI_FMT("OK\n", ANSI_FG_GREEN));
     print_free();
     return xstatus == 0;
   }
@@ -2957,6 +3117,8 @@ main(int argc, char *argv[])
     {pgaccesstest, "pgaccess"}, 
     {recursion, "recursion"},
     {stackoverflow, "stackoverflow"},
+    {cptest, "cptest"},
+    {mvtest, "mvtest"},
     // {badwrite, "badwrite" },
     // {writebig, "writebig"},
     { 0, 0},

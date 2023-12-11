@@ -90,6 +90,10 @@ argstr(int n, char *buf, int max)
 #include "kernel/syscall_def.h"
 #undef DEF_SYSCALL
 
+#define DEF_SYSCALL(id, name) extern const char *trace_##name();
+#include "kernel/syscall_def.h"
+#undef DEF_SYSCALL
+
 static uint64 (*syscalls[])(void) = {
 #define DEF_SYSCALL(id, name) [SYS_##name] sys_##name,
 #include "kernel/syscall_def.h"
@@ -102,6 +106,12 @@ static char *syscalls_name[] = {
 #undef DEF_SYSCALL
 };
 
+static const char *(*strace_param[])(void) = {
+#define DEF_SYSCALL(id, name) [SYS_##name] trace_##name,
+#include "kernel/syscall_def.h"
+#undef DEF_SYSCALL
+};
+
 void
 syscall(void)
 {
@@ -110,13 +120,14 @@ syscall(void)
 
   num = p->trapframe->a7; 
   if(num > 0 && num < NELEM(syscalls) && syscalls[num]) {
+    if ((1 << num) & p->trace_mask) {
+      printf(ANSI_FMT("%s(%d): %s(%s)", ANSI_FG_CYAN), 
+        p->name, p->pid, syscalls_name[num], strace_param[num]());
+    }
     uint64 ret = syscalls[num](); 
-    // strace
-    if ((1 << num) & p->trace_mask)
-      printf(ANSI_FMT("pid %d: %s(0x%lx, 0x%lx, 0x%lx) -> %d\n", ANSI_FG_CYAN), p->pid, syscalls_name[num], 
-        p->trapframe->a0,
-        p->trapframe->a1,
-        p->trapframe->a2, ret);
+    if ((1 << num) & p->trace_mask) {
+      printf(ANSI_FMT(" -> %d\n", ANSI_FG_CYAN), ret);
+    }
     p->trapframe->a0 = ret;
   } else {
     printf("%d %s: unknown sys call %d\n", p->pid, p->name, num);
