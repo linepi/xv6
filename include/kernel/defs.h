@@ -148,7 +148,12 @@ void*           memset(void*, int, uint);
 char*           safestrcpy(char*, const char*, int);
 int             strlen(const char*);
 int             strncmp(const char*, const char*, uint);
+int             strcmp(const char*, const char*);
+char *					strcat(char *s, const char *append);
 char*           strncpy(char*, const char*, int);
+char*           strcpy(char*, const char*);
+char *					strtok(char *s, const char *delim);
+char *					strtok_r(char *s, const char *delim, char **last);
 
 // syscall.c
 int             argint(int, int*);

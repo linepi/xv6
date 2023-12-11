@@ -133,6 +133,8 @@ found:
     return 0;
   } else {
     p->usyscall->pid = p->pid;
+    p->usyscall->cwd[0] = '/';
+    p->usyscall->cwd[1] = 0;
   }
 
   // An empty user page table.

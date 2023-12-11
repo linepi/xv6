@@ -248,17 +248,18 @@ inode_alloc(ushort type)
 void
 bitmap_alloc(int used)
 {
-  uchar buf[BLOCK_SIZE];
-  int i;
 
   printf("bitmap_alloc: first %d blocks have been allocated\n", used);
-  assert(used < BLOCK_SIZE*8);
-  bzero(buf, BLOCK_SIZE);
-  for(i = 0; i < used; i++){
-    buf[i/8] = buf[i/8] | (0x1 << (i%8));
+  for (int n = 0; n < nbitmap; n++) {
+    uchar buf[BLOCK_SIZE];
+    bzero(buf, BLOCK_SIZE);
+    for(int i = 0; i < used; i++){
+      buf[i/8] = buf[i/8] | (0x1 << (i%8));
+    }
+    write_block(sb.bmapstart + n, buf);
+    used -= BIT_PER_BLOCK;
   }
-  printf("bitmap_alloc: write bitmap block at sector %d\n", sb.bmapstart);
-  write_block(sb.bmapstart, buf);
+  printf("bitmap_alloc: write %d bitmap block from block %d\n", nbitmap, sb.bmapstart);
 }
 
 #define min(a, b) ((a) < (b) ? (a) : (b))

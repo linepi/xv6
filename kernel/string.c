@@ -67,6 +67,23 @@ strncmp(const char *p, const char *q, uint n)
   return (uchar)*p - (uchar)*q;
 }
 
+int
+strcmp(const char *p, const char *q)
+{
+  while(*p && *p == *q)
+    p++, q++;
+  return (uchar)*p - (uchar)*q;
+}
+
+char *
+strcat(char *s, const char *append)
+{
+	char *save = s;
+	for (; *s; ++s);
+	while ((*s++ = *append++));
+	return save;
+}
+
 char*
 strncpy(char *s, const char *t, int n)
 {
@@ -78,6 +95,14 @@ strncpy(char *s, const char *t, int n)
   while(n-- > 0)
     *s++ = 0;
   return os;
+}
+
+char *
+strcpy(char *s, const char *t)
+{
+  char *save = s;
+  while((*s++ = *t++) != 0);
+  return save;
 }
 
 // Like strncpy but guaranteed to NUL-terminate.
@@ -105,3 +130,52 @@ strlen(const char *s)
   return n;
 }
 
+char *
+strtok_r(char *s, const char *delim, char **last)
+{
+	char *spanp;
+	int c, sc;
+	char *tok;
+	if (s == NULL && (s = *last) == NULL)
+		return (NULL);
+	/*
+	 * Skip (span) leading delimiters (s += strspn(s, delim), sort of).
+	 */
+cont:
+	c = *s++;
+	for (spanp = (char *)delim; (sc = *spanp++) != 0;) {
+		if (c == sc)
+			goto cont;
+	}
+	if (c == 0) {		/* no non-delimiter characters */
+		*last = NULL;
+		return (NULL);
+	}
+	tok = s - 1;
+	/*
+	 * Scan token (scan for delimiters: s += strcspn(s, delim), sort of).
+	 * Note that delim must have one NUL; we stop if we see that, too.
+	 */
+	for (;;) {
+		c = *s++;
+		spanp = (char *)delim;
+		do {
+			if ((sc = *spanp++) == c) {
+				if (c == 0)
+					s = NULL;
+				else
+					s[-1] = 0;
+				*last = s;
+				return (tok);
+			}
+		} while (sc != 0);
+	}
+	/* NOTREACHED */
+}
+
+char *
+strtok(char *s, const char *delim)
+{
+	static char *last;
+	return strtok_r(s, delim, &last);
+}

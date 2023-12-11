@@ -15,6 +15,7 @@
 #include "kernel/sleeplock.h"
 #include "kernel/file.h"
 #include "kernel/fcntl.h"
+#include "kernel/memlayout.h"
 
 // Fetch the nth word-sized system call argument as a file descriptor
 // and return both the descriptor and the corresponding struct file.
@@ -387,9 +388,11 @@ sys_mknod(void)
   return 0;
 }
 
+static int chdir(char *cwd, const char *to);
 uint64
 sys_chdir(void)
 {
+
   char path[MAXPATH];
   struct inode *ip;
   struct proc *p = myproc();
@@ -408,18 +411,9 @@ sys_chdir(void)
   iunlock(ip);
   iput(p->cwd);
   end_op();
-  p->cwd = ip;
-  return 0;
-}
 
-uint64
-sys_getcwd(void)
-{
-  char path[MAXPATH];
-  int size;
-  if (argstr(0, path, MAXPATH) < 0 || argint(1, &size) < 0) {
-    return 0;
-  }
+  chdir(p->usyscall->cwd, path);
+  p->cwd = ip;
   return 0;
 }
 
@@ -493,5 +487,49 @@ sys_pipe(void)
     fileclose(wf);
     return -1;
   }
+  return 0;
+}
+
+static void 
+normalizePath(char *path) {
+  // 分割路径，并处理"."和".."。
+  char *tokens[256]; // 假设路径分段不超过256
+  char buf[MAXPATH];
+  strcpy(buf, path);
+  int count = 0;
+
+  char *token = strtok(buf, "/");
+  while (token != NULL) {
+    if (strcmp(token, "..") == 0) {
+      // 返回上级目录
+      if (count > 0) count--;
+    } else if (strcmp(token, ".") != 0) {
+      // 忽略当前目录符号
+      tokens[count++] = token;
+    }
+    token = strtok(NULL, "/");
+  }
+
+  // 重建规范化的路径
+  strcpy(path, "/");
+  for (int i = 0; i < count; i++) {
+    strcat(path, tokens[i]);
+    if (i < count - 1) strcat(path, "/");
+  }
+}
+
+static int 
+chdir(char *cwd, const char *to) {
+  char tempPath[MAXPATH]; 
+  if (to[0] == '/') {
+    strcpy(tempPath, to);
+  } else {
+    sprintf(tempPath, "%s/%s", cwd, to);
+  }
+  normalizePath(tempPath);
+  if (strlen(tempPath) >= MAXPATH) {
+    return -1;
+  }
+  strcpy(cwd, tempPath);
   return 0;
 }

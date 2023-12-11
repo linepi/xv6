@@ -16,12 +16,34 @@ strcpy(char *s, const char *t)
   return os;
 }
 
+char*
+strncpy(char *s, const char *t, int n)
+{
+  char *os;
+
+  os = s;
+  while(n-- > 0 && (*s++ = *t++) != 0)
+    ;
+  while(n-- > 0)
+    *s++ = 0;
+  return os;
+}
+
 int
 strcmp(const char *p, const char *q)
 {
   while(*p && *p == *q)
     p++, q++;
   return (uchar)*p - (uchar)*q;
+}
+
+char *
+strcat(char *s, const char *append)
+{
+	char *save = s;
+	for (; *s; ++s);
+	while ((*s++ = *append++));
+	return save;
 }
 
 uint
@@ -142,4 +164,11 @@ ugetpid(void)
 {
   struct usyscall *u = (struct usyscall *)USYSCALL;
   return u->pid;
+}
+
+char *
+getcwd(char *buf, int size) 
+{
+  struct usyscall *u = (struct usyscall *)USYSCALL;
+  return strncpy(buf, u->cwd, MAXPATH);
 }

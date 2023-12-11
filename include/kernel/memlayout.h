@@ -1,4 +1,6 @@
 #pragma once
+#include "kernel/param.h"
+
 // Physical memory layout
 
 // qemu -machine virt is set up like this,
@@ -71,6 +73,7 @@
 #define USYSCALL (TRAPFRAME - PGSIZE)
 struct usyscall {
   int pid;  // Process ID
+  char cwd[MAXPATH];
 };
 
 // map kernel stacks beneath the usyscall

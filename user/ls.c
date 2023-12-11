@@ -2,6 +2,7 @@
 #include "kernel/stat.h"
 #include "user/user.h"
 #include "kernel/fs.h"
+#include "common/color.h"
 
 char*
 fmtname(char *path)
@@ -63,7 +64,12 @@ ls(char *path)
         printf("ls: cannot stat %s\n", buf);
         continue;
       }
-      printf("%s %d %d %d\n", fmtname(buf), st.type, st.ino, st.size);
+      if (st.type == T_DIR)
+        printf(ANSI_FMT("%s", ANSI_FG_CYAN) " %d %d %d\n", fmtname(buf), st.type, st.ino, st.size);
+      else if (st.type == T_DEVICE)
+        printf(ANSI_FMT("%s", ANSI_FG_YELLOW) " %d %d %d\n", fmtname(buf), st.type, st.ino, st.size);
+      else
+        printf("%s %d %d %d\n", fmtname(buf), st.type, st.ino, st.size);
     }
     break;
   }

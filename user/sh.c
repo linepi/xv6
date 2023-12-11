@@ -15,6 +15,7 @@
 #define MAXARGS 10
 
 char cwd[MAXPATH] = "/";
+char *env[] = {"", "/", 0};
 int laststate;
 
 struct cmd {
@@ -79,8 +80,14 @@ runcmd(struct cmd *cmd)
     ecmd = (struct execcmd*)cmd;
     if(ecmd->argv[0] == 0)
       exit(1);
-    int ret = exec(ecmd->argv[0], ecmd->argv);
-    fprintf(2, "exec %s failed\n", ecmd->argv[0]);
+    int ret;
+    for (char **p = &env[0]; *p != 0; p++) {
+      char buf[MAXPATH];
+      strcpy(buf, *p);
+      strcat(buf, ecmd->argv[0]);
+      ret = exec(buf, ecmd->argv);
+    }
+    fprintf(2, "command not found: %s\n", ecmd->argv[0]);
     exit(ret);
 
   case REDIR:
