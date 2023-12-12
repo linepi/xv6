@@ -4,7 +4,9 @@
 #include "kernel/riscv.h"
 #include "kernel/spinlock.h"
 #include "kernel/proc.h"
+#include "kernel/fs.h"
 #include "kernel/defs.h"
+#include "common/log.h"
 
 struct cpu cpus[NCPU];
 
@@ -677,6 +679,7 @@ forkret(void)
     // be run from main().
     first = 0;
     fsinit(ROOTDEV);
+    printf("info: %d page | %d block\n", kmemleft()/PGSIZE, diskleft());
   }
 
   usertrapret();

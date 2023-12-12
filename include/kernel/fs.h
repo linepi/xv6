@@ -26,9 +26,10 @@ struct superblock {
   uint ndata;        // Number of data blocks
 };
 
-#define NDIRECT 12
+#define NDIRECT 11
 #define NINDIRECT (BLOCK_SIZE / sizeof(uint))
-#define MAXFILE (NDIRECT + NINDIRECT)
+#define NIINDIRECT (NINDIRECT * (BLOCK_SIZE / sizeof(uint)))
+#define MAXFILE_BLOCKS (NDIRECT + NINDIRECT + NIINDIRECT)
 
 // On-disk inode structure
 struct dinode {
@@ -37,7 +38,7 @@ struct dinode {
   short minor;          // Minor device number (T_DEVICE only)
   short nlink;          // Number of links to inode in file system
   uint size;            // Size of file (bytes)
-  uint addrs[NDIRECT+1];   // Data block addresses
+  uint addrs[NDIRECT+2];   // Data block addresses
 };
 
 // Inodes per block.
@@ -49,7 +50,7 @@ struct dinode {
 // Bitmap bits per block
 #define BIT_PER_BLOCK           (BLOCK_SIZE*8)
 
-// Block of free map containing bit for block b
+// Block of free map containing bit for block with blockno
 #define BITMAP_BLOCK(blockno, sb) ((blockno)/BIT_PER_BLOCK + sb.bmapstart)
 
 // Directory is a file containing a sequence of dirent structures.

@@ -274,29 +274,60 @@ iappend(uint inum, void *p_, int n)
   char buf[BLOCK_SIZE];
   uint indirect[NINDIRECT];
   uint x;
+  int one, two;
 
   rinode(inum, &din);
   off = xint(din.size);
   // printf("append inum %d at off %d sz %d\n", inum, off, n);
   while(n > 0){
     fbn = off / BLOCK_SIZE;
-    assert(fbn < MAXFILE);
-    if(fbn < NDIRECT){
+    assert(fbn < MAXFILE_BLOCKS);
+
+    one = two = 0;
+    if (fbn < NDIRECT) {
       if(xint(din.addrs[fbn]) == 0){
         din.addrs[fbn] = xint(freeblock++);
       }
       x = xint(din.addrs[fbn]);
     } else {
+      fbn -= NDIRECT;
+      one = 1;
+    }
+    if (one && fbn < NINDIRECT) {
       if(xint(din.addrs[NDIRECT]) == 0){
         din.addrs[NDIRECT] = xint(freeblock++);
       }
       read_block(xint(din.addrs[NDIRECT]), (char*)indirect);
-      if(indirect[fbn - NDIRECT] == 0){
-        indirect[fbn - NDIRECT] = xint(freeblock++);
+      if(indirect[fbn] == 0){
+        indirect[fbn] = xint(freeblock++);
         write_block(xint(din.addrs[NDIRECT]), (char*)indirect);
       }
-      x = xint(indirect[fbn-NDIRECT]);
+      x = xint(indirect[fbn]);
+    } else if (one) {
+      fbn -= NINDIRECT;
+      two = 1;
     }
+    if (two && fbn < NIINDIRECT) {
+      if(xint(din.addrs[NDIRECT+1]) == 0){
+        din.addrs[NDIRECT+1] = xint(freeblock++);
+      }
+      read_block(xint(din.addrs[NDIRECT+1]), (char*)indirect);
+      if(indirect[fbn/NINDIRECT] == 0){
+        indirect[fbn/NINDIRECT] = xint(freeblock++);
+        write_block(xint(din.addrs[NDIRECT+1]), (char*)indirect);
+      }
+      int t = xint(indirect[fbn/NINDIRECT]);
+      read_block(t, (char*)indirect);
+      if(indirect[fbn%NINDIRECT] == 0){
+        indirect[fbn%NINDIRECT] = xint(freeblock++);
+        write_block(t, (char*)indirect);
+      }
+      x = xint(indirect[fbn%NINDIRECT]);
+    } else if (two) {
+      die("file two large");
+    }
+    fbn = off / BLOCK_SIZE;
+
     n1 = min(n, (fbn + 1) * BLOCK_SIZE - off);
     read_block(x, buf);
     bcopy(p, buf + off - (fbn * BLOCK_SIZE), n1);

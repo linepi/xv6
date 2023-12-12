@@ -400,6 +400,27 @@ bmap(struct inode *ip, uint bn)
     brelease(bp);
     return addr;
   }
+  bn -= NINDIRECT;
+
+  if (bn < NIINDIRECT) {
+    if((addr = ip->addrs[NDIRECT+1]) == 0)
+      ip->addrs[NDIRECT+1] = addr = balloc(ip->dev);
+    bp = bread(ip->dev, addr);
+    a = (uint*)bp->data;
+    if ((addr = a[bn/NINDIRECT]) == 0) {
+      a[bn/NINDIRECT] = addr = balloc(ip->dev);
+      log_write(bp);
+    } 
+    brelease(bp);
+    bp = bread(ip->dev, addr);
+    a = (uint*)bp->data;
+    if ((addr = a[bn%NINDIRECT]) == 0){
+      a[bn%NINDIRECT] = addr = balloc(ip->dev);
+      log_write(bp);
+    }
+    brelease(bp);
+    return addr;
+  }
 
   panic("bmap: out of range");
 }
@@ -410,8 +431,8 @@ void
 itrunc(struct inode *ip)
 {
   int i, j;
-  struct block_buf *bp;
-  uint *a;
+  struct block_buf *bp, *bp2;
+  uint *a, *b;
 
   for(i = 0; i < NDIRECT; i++){
     if(ip->addrs[i]){
@@ -430,6 +451,27 @@ itrunc(struct inode *ip)
     brelease(bp);
     bfree(ip->dev, ip->addrs[NDIRECT]);
     ip->addrs[NDIRECT] = 0;
+  }
+
+  if(ip->addrs[NDIRECT+1]){
+    bp = bread(ip->dev, ip->addrs[NDIRECT+1]);
+    a = (uint*)bp->data;
+    for(i = 0; i < NINDIRECT; i++){
+      if(a[i]) {
+        bp2 = bread(ip->dev, a[i]);
+        b = (uint*)bp2->data;
+        for(j = 0; j < NINDIRECT; j++){
+          if(b[j])
+            bfree(ip->dev, b[j]);
+        }
+        brelease(bp2);
+        bfree(ip->dev, a[i]);
+        a[i] = 0;
+      }
+    }
+    brelease(bp);
+    bfree(ip->dev, ip->addrs[NDIRECT+1]);
+    ip->addrs[NDIRECT+1] = 0;
   }
 
   ip->size = 0;
@@ -491,7 +533,7 @@ writei(struct inode *ip, int user_src, uint64 src, uint off, uint n)
 
   if(off > ip->size || off + n < off)
     return -1;
-  if(off + n > MAXFILE*BLOCK_SIZE)
+  if(off + n > MAXFILE_BLOCKS*BLOCK_SIZE)
     return -1;
 
   for(tot=0; tot<n; tot+=m, off+=m, src+=m){
@@ -671,4 +713,25 @@ struct inode*
 nameiparent(char *path, char *name)
 {
   return namex(path, 1, name);
+}
+
+int
+diskleft()
+{
+  int b, bi, m;
+  struct block_buf *bp;
+  int ret = 0;
+
+  bp = 0;
+  for(b = 0; b < sb.size; b += BIT_PER_BLOCK){
+    bp = bread(ROOTDEV, BITMAP_BLOCK(b, sb));
+    for(bi = 0; bi < BIT_PER_BLOCK && b + bi < sb.size; bi++){
+      m = 1 << (bi % 8);
+      if((bp->data[bi/8] & m) == 0){  // Is block free?
+        ret++;
+      }
+    }
+    brelease(bp);
+  }
+  return ret;
 }

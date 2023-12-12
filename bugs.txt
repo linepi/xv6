@@ -1,222 +1,381 @@
 1. may "panic: acquire" at kernel start
 2. may stuck at kernel start()
+3. cannot call diskleft in sysinfo_dump func, dont know why
 
-Usertests for 3 cpu:
-$ usertests 
+usertests for 3 cpu:
 usertests starting
-memleft: 30222
-test MAXVAplus: segmentation fault on invalid 0x4000000000(pid=19 sepc=0x15a36)
-segmentation fault on invalid 0x8000000000(pid=20 sepc=0x15a36)
-segmentation fault on invalid 0x10000000000(pid=21 sepc=0x15a36)
-segmentation fault on invalid 0x20000000000(pid=22 sepc=0x15a36)
-segmentation fault on invalid 0x40000000000(pid=23 sepc=0x15a36)
-segmentation fault on invalid 0x80000000000(pid=24 sepc=0x15a36)
-segmentation fault on invalid 0x100000000000(pid=25 sepc=0x15a36)
-segmentation fault on invalid 0x200000000000(pid=26 sepc=0x15a36)
-segmentation fault on invalid 0x400000000000(pid=27 sepc=0x15a36)
-segmentation fault on invalid 0x800000000000(pid=28 sepc=0x15a36)
-segmentation fault on invalid 0x1000000000000(pid=29 sepc=0x15a36)
-segmentation fault on invalid 0x2000000000000(pid=30 sepc=0x15a36)
-segmentation fault on invalid 0x4000000000000(pid=31 sepc=0x15a36)
-segmentation fault on invalid 0x8000000000000(pid=32 sepc=0x15a36)
-segmentation fault on invalid 0x10000000000000(pid=33 sepc=0x15a36)
-segmentation fault on invalid 0x20000000000000(pid=34 sepc=0x15a36)
-segmentation fault on invalid 0x40000000000000(pid=35 sepc=0x15a36)
-segmentation fault on invalid 0x80000000000000(pid=36 sepc=0x15a36)
-segmentation fault on invalid 0x100000000000000(pid=37 sepc=0x15a36)
-segmentation fault on invalid 0x200000000000000(pid=38 sepc=0x15a36)
-segmentation fault on invalid 0x400000000000000(pid=39 sepc=0x15a36)
-segmentation fault on invalid 0x800000000000000(pid=40 sepc=0x15a36)
-segmentation fault on invalid 0x1000000000000000(pid=41 sepc=0x15a36)
-segmentation fault on invalid 0x2000000000000000(pid=42 sepc=0x15a36)
-segmentation fault on invalid 0x4000000000000000(pid=43 sepc=0x15a36)
-segmentation fault on invalid 0x-0(pid=44 sepc=0x15a36)
+memleft: 30197
+[test MAXVAplus]
+segmentation fault on invalid 0x4000000000(pid=7 sepc=0x16ca2)
+segmentation fault on invalid 0x8000000000(pid=8 sepc=0x16ca2)
+segmentation fault on invalid 0x10000000000(pid=9 sepc=0x16ca2)
+segmentation fault on invalid 0x20000000000(pid=10 sepc=0x16ca2)
+segmentation fault on invalid 0x40000000000(pid=11 sepc=0x16ca2)
+segmentation fault on invalid 0x80000000000(pid=12 sepc=0x16ca2)
+segmentation fault on invalid 0x100000000000(pid=13 sepc=0x16ca2)
+segmentation fault on invalid 0x200000000000(pid=14 sepc=0x16ca2)
+segmentation fault on invalid 0x400000000000(pid=15 sepc=0x16ca2)
+segmentation fault on invalid 0x800000000000(pid=16 sepc=0x16ca2)
+segmentation fault on invalid 0x1000000000000(pid=17 sepc=0x16ca2)
+segmentation fault on invalid 0x2000000000000(pid=18 sepc=0x16ca2)
+segmentation fault on invalid 0x4000000000000(pid=19 sepc=0x16ca2)
+segmentation fault on invalid 0x8000000000000(pid=20 sepc=0x16ca2)
+segmentation fault on invalid 0x10000000000000(pid=21 sepc=0x16ca2)
+segmentation fault on invalid 0x20000000000000(pid=22 sepc=0x16ca2)
+segmentation fault on invalid 0x40000000000000(pid=23 sepc=0x16ca2)
+segmentation fault on invalid 0x80000000000000(pid=24 sepc=0x16ca2)
+segmentation fault on invalid 0x100000000000000(pid=25 sepc=0x16ca2)
+segmentation fault on invalid 0x200000000000000(pid=26 sepc=0x16ca2)
+segmentation fault on invalid 0x400000000000000(pid=27 sepc=0x16ca2)
+segmentation fault on invalid 0x800000000000000(pid=28 sepc=0x16ca2)
+segmentation fault on invalid 0x1000000000000000(pid=29 sepc=0x16ca2)
+segmentation fault on invalid 0x2000000000000000(pid=30 sepc=0x16ca2)
+segmentation fault on invalid 0x4000000000000000(pid=31 sepc=0x16ca2)
+segmentation fault on invalid 0x8000000000000000(pid=32 sepc=0x16ca2)
 OK
-memleft: 30221
-test manywrites: OK
-memleft: 30221
-test execout: out of memory for lazy(stval=0x8f618fff pid=51 sepc=0x16a4a)
-out of memory for lazy(stval=0x8f618fff pid=52 sepc=0x16a4a)
-out of memory for lazy(stval=0x8f618fff pid=53 sepc=0x16a4a)
-out of memory for lazy(stval=0x8f618fff pid=54 sepc=0x16a4a)
-out of memory for lazy(stval=0x8f618fff pid=55 sepc=0x16a4a)
-out of memory for lazy(stval=0x8f618fff pid=56 sepc=0x16a4a)
-out of memory for lazy(stval=0x8f618fff pid=57 sepc=0x16a4a)
-out of memory for lazy(stval=0x8f618fff pid=58 sepc=0x16a4a)
-out of memory for lazy(stval=0x8f618fff pid=59 sepc=0x16a4a)
-out of memory for lazy(stval=0x8f618fff pid=60 sepc=0x16a4a)
-out of memory for lazy(stval=0x8f618fff pid=61 sepc=0x16a4a)
-out of memory for lazy(stval=0x8f618fff pid=62 sepc=0x16a4a)
-out of memory for lazy(stval=0x8f618fff pid=63 sepc=0x16a4a)
-out of memory for lazy(stval=0x8f618fff pid=64 sepc=0x16a4a)
-out of memory for lazy(stval=0x8f618fff pid=65 sepc=0x16a4a)
+memleft: 30197
+[test manywrites]
 OK
-memleft: 30221
-test copyin: OK
-memleft: 30221
-test copyout: OK
-memleft: 30221
-test copyinstr1: OK
-memleft: 30221
-test copyinstr2: OK
-memleft: 30221
-test copyinstr3: OK
-memleft: 30221
-test rwsbrk: OK
-memleft: 30221
-test truncate1: OK
-memleft: 30221
-test truncate2: OK
-memleft: 30221
-test truncate3: OK
-memleft: 30221
-test reparent2: OK
-memleft: 30216
-test pgbug: OK
-memleft: 30216
-test sbrkbugs: OK
-memleft: 30215
-test badarg: OK
-memleft: 30215
-test reparent: OK
-memleft: 30208
-test twochildren: OK
-memleft: 30203
-test forkfork: OK
-memleft: 30203
-test forkforkfork: OK
-memleft: 30203
-test argptest: OK
-memleft: 30203
-test createdelete: OK
-memleft: 30203
-test linkunlink: OK
-memleft: 30203
-test linktest: OK
-memleft: 30203
-test unlinkread: OK
-memleft: 30203
-test concreate: OK
-memleft: 30201
-test subdir: OK
-memleft: 30201
-test fourfiles: OK
-memleft: 30201
-test sharedfd: OK
-memleft: 30201
-test dirtest: OK
-memleft: 30201
-test exectest: OK
-memleft: 30201
-test bigargtest: OK
-memleft: 30201
-test bigwrite: OK
-memleft: 30201
-test bsstest: OK
-memleft: 30201
-test sbrkbasic: out of memory for lazy(stval=0x8f604000 pid=6229 sepc=0x15526)
+memleft: 30196
+[test execout]
+out of memory for lazy(stval=0x8f64afff pid=39 sepc=0x17f30)
+out of memory for lazy(stval=0x8f64afff pid=40 sepc=0x17f30)
+out of memory for lazy(stval=0x8f64afff pid=41 sepc=0x17f30)
+out of memory for lazy(stval=0x8f64afff pid=42 sepc=0x17f30)
+out of memory for lazy(stval=0x8f64afff pid=43 sepc=0x17f30)
+out of memory for lazy(stval=0x8f64afff pid=44 sepc=0x17f30)
+out of memory for lazy(stval=0x8f64afff pid=45 sepc=0x17f30)
+out of memory for lazy(stval=0x8f64afff pid=46 sepc=0x17f30)
+out of memory for lazy(stval=0x8f64afff pid=47 sepc=0x17f30)
+out of memory for lazy(stval=0x8f64afff pid=48 sepc=0x17f30)
+out of memory for lazy(stval=0x8f64afff pid=49 sepc=0x17f30)
+out of memory for lazy(stval=0x8f64afff pid=50 sepc=0x17f30)
+out of memory for lazy(stval=0x8f64afff pid=51 sepc=0x17f30)
+out of memory for lazy(stval=0x8f64afff pid=52 sepc=0x17f30)
+out of memory for lazy(stval=0x8f64afff pid=53 sepc=0x17f30)
 OK
-memleft: 30201
-test sbrkmuch: OK
-memleft: 30201
-test kernmem: segmentation fault on invalid 0x80000000(pid=6233 sepc=0x1595c)
-segmentation fault on invalid 0x8000c350(pid=6234 sepc=0x1595c)
-segmentation fault on invalid 0x800186a0(pid=6235 sepc=0x1595c)
-segmentation fault on invalid 0x800249f0(pid=6236 sepc=0x1595c)
-segmentation fault on invalid 0x80030d40(pid=6237 sepc=0x1595c)
-segmentation fault on invalid 0x8003d090(pid=6238 sepc=0x1595c)
-segmentation fault on invalid 0x800493e0(pid=6239 sepc=0x1595c)
-segmentation fault on invalid 0x80055730(pid=6240 sepc=0x1595c)
-segmentation fault on invalid 0x80061a80(pid=6241 sepc=0x1595c)
-segmentation fault on invalid 0x8006ddd0(pid=6242 sepc=0x1595c)
-segmentation fault on invalid 0x8007a120(pid=6243 sepc=0x1595c)
-segmentation fault on invalid 0x80086470(pid=6244 sepc=0x1595c)
-segmentation fault on invalid 0x800927c0(pid=6245 sepc=0x1595c)
-segmentation fault on invalid 0x8009eb10(pid=6246 sepc=0x1595c)
-segmentation fault on invalid 0x800aae60(pid=6247 sepc=0x1595c)
-segmentation fault on invalid 0x800b71b0(pid=6248 sepc=0x1595c)
-segmentation fault on invalid 0x800c3500(pid=6249 sepc=0x1595c)
-segmentation fault on invalid 0x800cf850(pid=6250 sepc=0x1595c)
-segmentation fault on invalid 0x800dbba0(pid=6251 sepc=0x1595c)
-segmentation fault on invalid 0x800e7ef0(pid=6252 sepc=0x1595c)
-segmentation fault on invalid 0x800f4240(pid=6253 sepc=0x1595c)
-segmentation fault on invalid 0x80100590(pid=6254 sepc=0x1595c)
-segmentation fault on invalid 0x8010c8e0(pid=6255 sepc=0x1595c)
-segmentation fault on invalid 0x80118c30(pid=6256 sepc=0x1595c)
-segmentation fault on invalid 0x80124f80(pid=6257 sepc=0x1595c)
-segmentation fault on invalid 0x801312d0(pid=6258 sepc=0x1595c)
-segmentation fault on invalid 0x8013d620(pid=6259 sepc=0x1595c)
-segmentation fault on invalid 0x80149970(pid=6260 sepc=0x1595c)
-segmentation fault on invalid 0x80155cc0(pid=6261 sepc=0x1595c)
-segmentation fault on invalid 0x80162010(pid=6262 sepc=0x1595c)
-segmentation fault on invalid 0x8016e360(pid=6263 sepc=0x1595c)
-segmentation fault on invalid 0x8017a6b0(pid=6264 sepc=0x1595c)
-segmentation fault on invalid 0x80186a00(pid=6265 sepc=0x1595c)
-segmentation fault on invalid 0x80192d50(pid=6266 sepc=0x1595c)
-segmentation fault on invalid 0x8019f0a0(pid=6267 sepc=0x1595c)
-segmentation fault on invalid 0x801ab3f0(pid=6268 sepc=0x1595c)
-segmentation fault on invalid 0x801b7740(pid=6269 sepc=0x1595c)
-segmentation fault on invalid 0x801c3a90(pid=6270 sepc=0x1595c)
-segmentation fault on invalid 0x801cfde0(pid=6271 sepc=0x1595c)
-segmentation fault on invalid 0x801dc130(pid=6272 sepc=0x1595c)
+memleft: 30196
+[test copyin]
 OK
-memleft: 30201
-test sbrkfail: out of memory for lazy(stval=0x8f603000 pid=6284 sepc=0x15c90)
+memleft: 30196
+[test copyout]
 OK
-memleft: 30200
-test sbrkarg: OK
-memleft: 30200
-test sbrklast: OK
-memleft: 30200
-test validatetest: OK
-memleft: 30200
-test opentest: OK
-memleft: 30200
-test writetest: OK
-memleft: 30200
-test createtest: OK
-memleft: 30200
-test openiput: OK
-memleft: 30200
-test exitiput: OK
-memleft: 30200
-test iput: OK
-memleft: 30200
-test mem: out of memory for lazy(stval=0x98bb38d8 pid=6297 sepc=0x17b2e)
+memleft: 30196
+[test copyinstr1]
 OK
-memleft: 30200
-test pipe1: OK
-memleft: 30200
-test killstatus: OK
-memleft: 30200
-test preempt: kill... wait... OK
-memleft: 30200
-test exitwait: OK
-memleft: 30200
-test rmdot: OK
-memleft: 30200
-test fourteen: OK
-memleft: 30200
-test bigfile: OK
-memleft: 30200
-test dirfile: OK
-memleft: 30200
-test iref: OK
-memleft: 30200
-test forktest: OK
-memleft: 30187
-test bigdir: OK
-memleft: 30187
-test ugetpid: OK
-memleft: 30187
-test pgaccess: OK
-memleft: 30187
-test recursion: OK
-memleft: 30187
-test stackoverflow: out of memory for stack(stval=0x3ff6cf3ff8 pid=6610 sepc=0x16afa)
+memleft: 30196
+[test copyinstr2]
+OK
+memleft: 30196
+[test copyinstr3]
+OK
+memleft: 30196
+[test rwsbrk]
+OK
+memleft: 30196
+[test truncate1]
+OK
+memleft: 30196
+[test truncate2]
+OK
+memleft: 30196
+[test truncate3]
+OK
+memleft: 30196
+[test reparent2]
+OK
+memleft: 30192
+[test pgbug]
+OK
+memleft: 30192
+[test sbrkbugs]
+OK
+memleft: 30192
+[test badarg]
+OK
+memleft: 30192
+[test reparent]
+OK
+memleft: 30189
+[test twochildren]
 OK
 memleft: 30187
-consume 3635 time
+[test forkfork]
+OK
+memleft: 30187
+[test forkforkfork]
+OK
+memleft: 30187
+[test argptest]
+OK
+memleft: 30187
+[test createdelete]
+OK
+memleft: 30187
+[test linkunlink]
+OK
+memleft: 30187
+[test linktest]
+OK
+memleft: 30187
+[test unlinkread]
+OK
+memleft: 30187
+[test concreate]
+OK
+memleft: 30186
+[test subdir]
+OK
+memleft: 30186
+[test fourfiles]
+OK
+memleft: 30186
+[test sharedfd]
+OK
+memleft: 30186
+[test dirtest]
+OK
+memleft: 30186
+[test exectest]
+OK
+memleft: 30186
+[test bigargtest]
+OK
+memleft: 30186
+[test bigwrite]
+OK
+memleft: 30186
+[test bsstest]
+OK
+memleft: 30186
+[test sbrkbasic]
+out of memory for lazy(stval=0x8f640000 pid=6217 sepc=0x16676)
+OK
+memleft: 30186
+[test sbrkmuch]
+OK
+memleft: 30186
+[test kernmem]
+segmentation fault on invalid 0x80000000(pid=6221 sepc=0x16b9c)
+segmentation fault on invalid 0x8000c350(pid=6222 sepc=0x16b9c)
+segmentation fault on invalid 0x800186a0(pid=6223 sepc=0x16b9c)
+segmentation fault on invalid 0x800249f0(pid=6224 sepc=0x16b9c)
+segmentation fault on invalid 0x80030d40(pid=6225 sepc=0x16b9c)
+segmentation fault on invalid 0x8003d090(pid=6226 sepc=0x16b9c)
+segmentation fault on invalid 0x800493e0(pid=6227 sepc=0x16b9c)
+segmentation fault on invalid 0x80055730(pid=6228 sepc=0x16b9c)
+segmentation fault on invalid 0x80061a80(pid=6229 sepc=0x16b9c)
+segmentation fault on invalid 0x8006ddd0(pid=6230 sepc=0x16b9c)
+segmentation fault on invalid 0x8007a120(pid=6231 sepc=0x16b9c)
+segmentation fault on invalid 0x80086470(pid=6232 sepc=0x16b9c)
+segmentation fault on invalid 0x800927c0(pid=6233 sepc=0x16b9c)
+segmentation fault on invalid 0x8009eb10(pid=6234 sepc=0x16b9c)
+segmentation fault on invalid 0x800aae60(pid=6235 sepc=0x16b9c)
+segmentation fault on invalid 0x800b71b0(pid=6236 sepc=0x16b9c)
+segmentation fault on invalid 0x800c3500(pid=6237 sepc=0x16b9c)
+segmentation fault on invalid 0x800cf850(pid=6238 sepc=0x16b9c)
+segmentation fault on invalid 0x800dbba0(pid=6239 sepc=0x16b9c)
+segmentation fault on invalid 0x800e7ef0(pid=6240 sepc=0x16b9c)
+segmentation fault on invalid 0x800f4240(pid=6241 sepc=0x16b9c)
+segmentation fault on invalid 0x80100590(pid=6242 sepc=0x16b9c)
+segmentation fault on invalid 0x8010c8e0(pid=6243 sepc=0x16b9c)
+segmentation fault on invalid 0x80118c30(pid=6244 sepc=0x16b9c)
+segmentation fault on invalid 0x80124f80(pid=6245 sepc=0x16b9c)
+segmentation fault on invalid 0x801312d0(pid=6246 sepc=0x16b9c)
+segmentation fault on invalid 0x8013d620(pid=6247 sepc=0x16b9c)
+segmentation fault on invalid 0x80149970(pid=6248 sepc=0x16b9c)
+segmentation fault on invalid 0x80155cc0(pid=6249 sepc=0x16b9c)
+segmentation fault on invalid 0x80162010(pid=6250 sepc=0x16b9c)
+segmentation fault on invalid 0x8016e360(pid=6251 sepc=0x16b9c)
+segmentation fault on invalid 0x8017a6b0(pid=6252 sepc=0x16b9c)
+segmentation fault on invalid 0x80186a00(pid=6253 sepc=0x16b9c)
+segmentation fault on invalid 0x80192d50(pid=6254 sepc=0x16b9c)
+segmentation fault on invalid 0x8019f0a0(pid=6255 sepc=0x16b9c)
+segmentation fault on invalid 0x801ab3f0(pid=6256 sepc=0x16b9c)
+segmentation fault on invalid 0x801b7740(pid=6257 sepc=0x16b9c)
+segmentation fault on invalid 0x801c3a90(pid=6258 sepc=0x16b9c)
+segmentation fault on invalid 0x801cfde0(pid=6259 sepc=0x16b9c)
+segmentation fault on invalid 0x801dc130(pid=6260 sepc=0x16b9c)
+OK
+memleft: 30186
+[test sbrkfail]
+out of memory for lazy(stval=0x8f640000 pid=6272 sepc=0x16f52)
+OK
+memleft: 30186
+[test sbrkarg]
+OK
+memleft: 30186
+[test sbrklast]
+OK
+memleft: 30186
+[test validatetest]
+OK
+memleft: 30186
+[test opentest]
+OK
+memleft: 30186
+[test writetest]
+OK
+memleft: 30186
+[test createtest]
+OK
+memleft: 30186
+[test openiput]
+OK
+memleft: 30186
+[test exitiput]
+OK
+memleft: 30186
+[test iput]
+OK
+memleft: 30186
+[test mem]
+out of memory for lazy(stval=0x98bde8d8 pid=6285 sepc=0x1a00c)
+OK
+memleft: 30186
+[test pipe1]
+OK
+memleft: 30186
+[test killstatus]
+OK
+memleft: 30186
+[test preempt]
+[user/usertests.c:861 preempt] kill... [user/usertests.c:865 preempt] wait... OK
+memleft: 30186
+[test exitwait]
+OK
+memleft: 30184
+[test rmdot]
+OK
+memleft: 30184
+[test fourteen]
+OK
+memleft: 30184
+[test bigfile]
+OK
+memleft: 30184
+[test dirfile]
+OK
+memleft: 30184
+[test iref]
+OK
+memleft: 30183
+[test forktest]
+OK
+memleft: 30170
+[test bigdir]
+OK
+memleft: 30170
+[test ugetpid]
+OK
+memleft: 30170
+[test pgaccess]
+OK
+memleft: 30170
+[test recursion]
+OK
+memleft: 30170
+[test stackoverflow]
+out of memory for stack(stval=0x3ff6c78ff8 pid=6598 sepc=0x17fdc)
+OK
+memleft: 30170
+[test cpmvtest]
+OK
+memleft: 30170
+[test largefile]
+..................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................................
+wrote 65803 blocks
+bigfile done; ok
+OK
+memleft: 30170
+consume 16217 time
 ALL TESTS PASSED
 
-lazy and cow all passed
+lazytests starting
+running test lazy alloc
+test lazy alloc: OK
+running test lazy unmap
+segmentation fault on invalid 0x88057000(pid=6 sepc=0x10266)
+segmentation fault on invalid 0x89057000(pid=7 sepc=0x10266)
+segmentation fault on invalid 0x8a057000(pid=8 sepc=0x10266)
+segmentation fault on invalid 0x8b057000(pid=9 sepc=0x10266)
+segmentation fault on invalid 0x8c057000(pid=10 sepc=0x10266)
+segmentation fault on invalid 0x8d057000(pid=11 sepc=0x10266)
+segmentation fault on invalid 0x8e057000(pid=12 sepc=0x10266)
+segmentation fault on invalid 0x8f057000(pid=13 sepc=0x10266)
+segmentation fault on invalid 0x90057000(pid=14 sepc=0x10266)
+segmentation fault on invalid 0x91057000(pid=15 sepc=0x10266)
+segmentation fault on invalid 0x92057000(pid=16 sepc=0x10266)
+segmentation fault on invalid 0x93057000(pid=17 sepc=0x10266)
+segmentation fault on invalid 0x94057000(pid=18 sepc=0x10266)
+segmentation fault on invalid 0x95057000(pid=19 sepc=0x10266)
+segmentation fault on invalid 0x96057000(pid=20 sepc=0x10266)
+segmentation fault on invalid 0x97057000(pid=21 sepc=0x10266)
+segmentation fault on invalid 0x98057000(pid=22 sepc=0x10266)
+segmentation fault on invalid 0x99057000(pid=23 sepc=0x10266)
+segmentation fault on invalid 0x9a057000(pid=24 sepc=0x10266)
+segmentation fault on invalid 0x9b057000(pid=25 sepc=0x10266)
+segmentation fault on invalid 0x9c057000(pid=26 sepc=0x10266)
+segmentation fault on invalid 0x9d057000(pid=27 sepc=0x10266)
+segmentation fault on invalid 0x9e057000(pid=28 sepc=0x10266)
+segmentation fault on invalid 0x9f057000(pid=29 sepc=0x10266)
+segmentation fault on invalid 0xa0057000(pid=30 sepc=0x10266)
+segmentation fault on invalid 0xa1057000(pid=31 sepc=0x10266)
+segmentation fault on invalid 0xa2057000(pid=32 sepc=0x10266)
+segmentation fault on invalid 0xa3057000(pid=33 sepc=0x10266)
+segmentation fault on invalid 0xa4057000(pid=34 sepc=0x10266)
+segmentation fault on invalid 0xa5057000(pid=35 sepc=0x10266)
+segmentation fault on invalid 0xa6057000(pid=36 sepc=0x10266)
+segmentation fault on invalid 0xa7057000(pid=37 sepc=0x10266)
+segmentation fault on invalid 0xa8057000(pid=38 sepc=0x10266)
+segmentation fault on invalid 0xa9057000(pid=39 sepc=0x10266)
+segmentation fault on invalid 0xaa057000(pid=40 sepc=0x10266)
+segmentation fault on invalid 0xab057000(pid=41 sepc=0x10266)
+segmentation fault on invalid 0xac057000(pid=42 sepc=0x10266)
+segmentation fault on invalid 0xad057000(pid=43 sepc=0x10266)
+segmentation fault on invalid 0xae057000(pid=44 sepc=0x10266)
+segmentation fault on invalid 0xaf057000(pid=45 sepc=0x10266)
+segmentation fault on invalid 0xb0057000(pid=46 sepc=0x10266)
+segmentation fault on invalid 0xb1057000(pid=47 sepc=0x10266)
+segmentation fault on invalid 0xb2057000(pid=48 sepc=0x10266)
+segmentation fault on invalid 0xb3057000(pid=49 sepc=0x10266)
+segmentation fault on invalid 0xb4057000(pid=50 sepc=0x10266)
+segmentation fault on invalid 0xb5057000(pid=51 sepc=0x10266)
+segmentation fault on invalid 0xb6057000(pid=52 sepc=0x10266)
+segmentation fault on invalid 0xb7057000(pid=53 sepc=0x10266)
+segmentation fault on invalid 0xb8057000(pid=54 sepc=0x10266)
+segmentation fault on invalid 0xb9057000(pid=55 sepc=0x10266)
+segmentation fault on invalid 0xba057000(pid=56 sepc=0x10266)
+segmentation fault on invalid 0xbb057000(pid=57 sepc=0x10266)
+segmentation fault on invalid 0xbc057000(pid=58 sepc=0x10266)
+segmentation fault on invalid 0xbd057000(pid=59 sepc=0x10266)
+segmentation fault on invalid 0xbe057000(pid=60 sepc=0x10266)
+segmentation fault on invalid 0xbf057000(pid=61 sepc=0x10266)
+segmentation fault on invalid 0xc0057000(pid=62 sepc=0x10266)
+segmentation fault on invalid 0xc1057000(pid=63 sepc=0x10266)
+segmentation fault on invalid 0xc2057000(pid=64 sepc=0x10266)
+segmentation fault on invalid 0xc3057000(pid=65 sepc=0x10266)
+segmentation fault on invalid 0xc4057000(pid=66 sepc=0x10266)
+segmentation fault on invalid 0xc5057000(pid=67 sepc=0x10266)
+segmentation fault on invalid 0xc6057000(pid=68 sepc=0x10266)
+segmentation fault on invalid 0xc7057000(pid=69 sepc=0x10266)
+test lazy unmap: OK
+running test out of memory
+out of memory for lazy(stval=0x276507cdd8 pid=71 sepc=0x10e20)
+test out of memory: OK
+ALL TESTS PASSED
+
+√ / # cowtest
+memleft: 30211 page
+simple: ok
+simple: ok
+memleft: 30211 page
+three: ok
+memleft: 30211 page
+three: ok
+memleft: 30210 page
+three: ok
+memleft: 30210 page
+file: ok
+memleft: 30206 page
+ALL COW TESTS PASSED

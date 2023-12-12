@@ -583,7 +583,7 @@ writebig(char *s)
     exit(1);
   }
 
-  for(i = 0; i < MAXFILE; i++){
+  for(i = 0; i < MAXFILE_BLOCKS; i++){
     ((int*)buf)[0] = i;
     if(write(fd, buf, BLOCK_SIZE) != BLOCK_SIZE){
       LOG("%s: error: write big file failed\n", s, i);
@@ -603,7 +603,7 @@ writebig(char *s)
   for(;;){
     i = read(fd, buf, BLOCK_SIZE);
     if(i == 0){
-      if(n == MAXFILE - 1){
+      if(n == MAXFILE_BLOCKS - 1){
         LOG("%s: read only %d blocks from big", s, n);
         exit(1);
       }
@@ -2960,6 +2960,59 @@ end:
   exit(ret);
 }
 
+void 
+largefile(char *testname)
+{
+  char buf[BLOCK_SIZE];
+  int fd, i, blocks;
+
+  fd = open("big.file", O_CREATE | O_WRONLY);
+  if(fd < 0){
+    printf("bigfile: cannot open big.file for writing\n");
+    exit(-1);
+  }
+
+  blocks = 0;
+  while(1){
+    *(int*)buf = blocks;
+    int cc = write(fd, buf, sizeof(buf));
+    if(cc <= 0)
+      break;
+    blocks++;
+    if (blocks % 100 == 0)
+      printf(".");
+  }
+
+  printf("\nwrote %d blocks\n", blocks);
+  if(blocks != 65803) {
+    printf("bigfile: file is too small\n");
+    exit(-1);
+  }
+  
+  close(fd);
+  fd = open("big.file", O_RDONLY);
+  if(fd < 0){
+    printf("bigfile: cannot re-open big.file for reading\n");
+    exit(-1);
+  }
+  for(i = 0; i < blocks; i++){
+    int cc = read(fd, buf, sizeof(buf));
+    if(cc <= 0){
+      printf("bigfile: read error at block %d\n", i);
+      exit(-1);
+    }
+    if(*(int*)buf != i){
+      printf("bigfile: read the wrong data (%d) for block %d\n",
+             *(int*)buf, i);
+      exit(-1);
+    }
+  }
+
+  printf("bigfile done; ok\n"); 
+
+  exit(0);
+}
+
 //
 // use sbrk() to count how many free physical memory pages there are.
 // touches the pages to force allocation.
@@ -3026,21 +3079,15 @@ countfree()
   return n;
 }
 
-int 
-countfree2()
+void 
+print_free()
 {
   struct system_info si;
   if (system_info(&si) == -1) {
     LOG("Get system info error, exit...\n");
     exit(0);
   }
-  return si.memleft / PGSIZE;
-}
-
-void 
-print_free()
-{
-  printf(ANSI_FMT("memleft: %d\n", ANSI_FG_CYAN), countfree2());
+  printf(ANSI_FMT("memleft: %d page, diskleft: %d block\n", ANSI_FG_CYAN), si.memleft/PGSIZE, si.diskleft);
 }
 
 
@@ -3155,6 +3202,7 @@ main(int argc, char *argv[])
     {recursion, "recursion"},
     {stackoverflow, "stackoverflow"},
     {cpmvtest, "cpmvtest"},
+    {largefile, "largefile"},
     // {badwrite, "badwrite" },
     // {writebig, "writebig"},
     { 0, 0},

@@ -80,7 +80,7 @@ runcmd(struct cmd *cmd)
     ecmd = (struct execcmd*)cmd;
     if(ecmd->argv[0] == 0)
       exit(1);
-    int ret;
+    int ret = 0;
     for (char **p = &env[0]; *p != 0; p++) {
       char buf[MAXPATH];
       strcpy(buf, *p);

@@ -4,7 +4,7 @@ MEMORY=128
 
 TOOLPREFIX = riscv64-unknown-elf-
 FS_IMG = build/fs.img
-FS_IMG_FILES = README Makefile LICENSE $(U_PROGS) 
+FS_IMG_FILES = README Makefile LICENSE $(U_PROGS) $(K_OBJ_DIR)/kernel
 
 QEMU = qemu-system-riscv64
 BUILD_DIR = build
