@@ -5,6 +5,7 @@
 #include "kernel/fs.h"
 #include "kernel/memlayout.h"
 #include "user/user.h"
+#include "common/log.h"
 
 char*
 strcpy(char *s, const char *t)
@@ -190,18 +191,18 @@ rmdir_(char *path)
 {
   struct stat st;
   if (stat(path, &st) < 0) {
-    fprintf(2, "rmdir: %s failed to stat\n", path);
+    LOG("failed to stat %s\n", path);
     return -1;
   }
   if (st.type == T_FILE) {
     if(unlink(path) < 0){
-      fprintf(2, "rmdir: %s failed to delete\n", path);
+      LOG("failed to unlink %s\n", path);
       return -1;
     }
   } else if (st.type == T_DIR) {
     int fd = open(path, O_RDONLY);
     if (fd < 0) {
-      fprintf(2, "rmdir: open %s failed\n", path);
+      LOG("open %s failed\n", path);
       return -1;
     }
     struct dirent de;	
@@ -221,7 +222,7 @@ rmdir_(char *path)
     }
     close(fd);
     if(unlink(path) < 0){
-      fprintf(2, "rmdir: %s failed to delete\n", path);
+      LOG("failed to unlink %s\n", path);
       return -1;
     }
   }

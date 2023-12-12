@@ -4,7 +4,7 @@
 #include "user/user.h"
 #include "kernel/fcntl.h"
 #include "kernel/param.h"
-#include "common/color.h"
+#include "common/log.h"
 
 // Parsed command representation
 #define EXEC  1

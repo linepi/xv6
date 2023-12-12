@@ -2,7 +2,7 @@
 #include "kernel/stat.h"
 #include "user/user.h"
 #include "kernel/fs.h"
-#include "common/color.h"
+#include "common/log.h"
 
 char*
 fmtname(char *path)

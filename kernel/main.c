@@ -3,7 +3,7 @@
 #include "kernel/memlayout.h"
 #include "kernel/riscv.h"
 #include "kernel/defs.h"
-#include "common/color.h"
+#include "common/log.h"
 
 volatile static int started = 0;
 

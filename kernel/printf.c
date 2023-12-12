@@ -14,7 +14,7 @@
 #include "kernel/riscv.h"
 #include "kernel/defs.h"
 #include "kernel/proc.h"
-#include "common/color.h"
+#include "common/log.h"
 
 volatile int panicked = 0;
 

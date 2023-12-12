@@ -1,3 +1,5 @@
+#pragma once
+
 #define ANSI_FG_BLACK   "\33[1;30m"
 #define ANSI_FG_RED     "\33[1;31m"
 #define ANSI_FG_GREEN   "\33[1;32m"
@@ -17,3 +19,5 @@
 #define ANSI_NONE       "\33[0m"
 
 #define ANSI_FMT(str, fmt) fmt str ANSI_NONE
+
+#define LOG(fmt, ...) printf(ANSI_FMT("[%s:%d %s] ", ANSI_FG_MAGENTA) fmt, __FILE__, __LINE__, __func__, ## __VA_ARGS__)

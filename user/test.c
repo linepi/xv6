@@ -9,7 +9,7 @@
 #include "kernel/syscall.h"
 #include "kernel/memlayout.h"
 #include "kernel/riscv.h"
-#include "common/color.h"
+#include "common/log.h"
 
 int
 cmd_wrapper(char* cmd, ...)

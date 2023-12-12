@@ -25,7 +25,7 @@ int main(int argc, char **argv)
 	if (state != 0) 
 		exit(state);
 
-	if (unlink(argv[1]) < 0) {
+	if (rmdir(argv[1]) < 0) {
 		fprintf(2, "failed to delete %s\n", argv[1]);
 		exit(1);
 	}
