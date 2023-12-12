@@ -86,10 +86,6 @@ argstr(int n, char *buf, int max)
   return fetchstr(addr, buf, max);
 }
 
-#define DEF_SYSCALL(id, name) extern uint64 sys_##name(void);
-#include "kernel/syscall_def.h"
-#undef DEF_SYSCALL
-
 #define DEF_SYSCALL(id, name) extern const char *trace_##name();
 #include "kernel/syscall_def.h"
 #undef DEF_SYSCALL

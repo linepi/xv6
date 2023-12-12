@@ -91,7 +91,7 @@ void            printf(const char*, ...);
 void            panic(const char*, ...) __attribute__((noreturn));
 void            assert(int);
 void            printfinit(void);
-void            backtrace(void);
+void            backtrace(int);
 
 // proc.c
 int             cpuid(void);
@@ -157,6 +157,9 @@ char *					strtok(char *s, const char *delim);
 char *					strtok_r(char *s, const char *delim, char **last);
 
 // syscall.c
+#define DEF_SYSCALL(id, name) extern uint64 sys_##name(void);
+#include "kernel/syscall_def.h"
+#undef DEF_SYSCALL
 int             argint(int, int*);
 int             argstr(int, char*, int);
 int             argaddr(int, uint64 *);

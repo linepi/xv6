@@ -4,6 +4,8 @@
 #include "kernel/fs.h"
 #include "common/log.h"
 
+int show_dot = 0;
+
 char*
 fmtname(char *path)
 {
@@ -64,6 +66,17 @@ ls(char *path)
         printf("ls: cannot stat %s\n", buf);
         continue;
       }
+
+      char first;
+      char *tmp;
+      if ((tmp = strrchr(buf, '/')) != NULL) {
+        first = *(tmp + 1);
+      } else {
+        first = buf[0];
+      }
+      if (first == '.' && !show_dot)
+        continue;
+
       if (st.type == T_DIR)
         printf(ANSI_FMT("%s", ANSI_FG_CYAN) " %d %d %d\n", fmtname(buf), st.type, st.ino, st.size);
       else if (st.type == T_DEVICE)
@@ -80,6 +93,11 @@ int
 main(int argc, char *argv[])
 {
   int i;
+
+  for (int i = 0; i < argc; i++) {
+    if (strcmp(argv[i], "-a") == 0)
+      show_dot = 1;
+  }
 
   if(argc < 2){
     ls(".");

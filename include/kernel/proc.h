@@ -90,6 +90,7 @@ struct trapframe {
 enum procstate { UNUSED, USED, SLEEPING, RUNNABLE, RUNNING, ZOMBIE };
 
 struct addrinfo {
+  uint64 logical_stack_top;
   uint64 stack_top;
   uint64 stack_bottom;
   uint64 heap_end;
@@ -104,6 +105,7 @@ struct kpagetable_wrapper {
 };
 
 #define addrinfo_clear(addrinfo) do { \
+  addrinfo.logical_stack_top = 0; \
   addrinfo.stack_top = 0; \
   addrinfo.stack_bottom = 0; \
   addrinfo.heap_end = 0; \

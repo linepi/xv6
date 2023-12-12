@@ -50,6 +50,43 @@ printint(int xx, int base, int sign)
     consputc(buf[i]);
 }
 
+int
+cto16(char c)
+{
+  switch (c){
+    case '0': return 0;
+    case '1': return 1;
+    case '2': return 2;
+    case '3': return 3;
+    case '4': return 4;
+    case '5': return 5;
+    case '6': return 6;
+    case '7': return 7;
+    case '8': return 8;
+    case '9': return 9;
+    case 'a': return 10;
+    case 'b': return 11;
+    case 'c': return 12;
+    case 'd': return 13;
+    case 'e': return 14;
+    case 'f': return 15;
+    default: return -1;
+  }
+}
+
+uint64 
+stolu(const char *s)
+{
+  if (s[0] == '0' && s[1] == 'x')
+    s += 2;
+  uint64 ret = 0;
+  uint64 i = 1;
+  for (int off = strlen(s) - 1; off >= 0; off--, i <<= 4) {
+    ret += cto16(*(s + off)) * i;
+  }
+  return ret;
+}
+
 // Function to print a long integer in any base (binary, decimal, hex, etc.)
 static void 
 printlong(long num, int base, int sign) {
@@ -90,6 +127,10 @@ static void
 printx64(uint64 x)
 {
   int i, notzero = 0;
+  if (x == 0) {
+    consputc('0');
+    return;
+  }
   for (i = 0; i < (sizeof(uint64) * 2); i++, x <<= 4) {
     char c = digits[x >> (sizeof(uint64) * 8 - 4)];
     if (c != '0')
@@ -103,6 +144,10 @@ static void
 printx32(uint32 x)
 {
   int i, notzero = 0;
+  if (x == 0) {
+    consputc('0');
+    return;
+  }
   for (i = 0; i < (sizeof(uint32) * 2); i++, x <<= 4) {
     char c = digits[x >> (sizeof(uint32) * 8 - 4)];
     if (c != '0')
@@ -215,19 +260,57 @@ printfinit(void)
   pr.locking = 1;
 }
 
+// to be implemented
+int
+file_readline(const char *file, char *buf)
+{
+  return 0;
+}
+
 /**
  * @brief backtrace 回溯函数调用的返回地址
  */
 void
-backtrace(void) {
+backtrace(int user) {
+  uint64 fp, end, addr;
+  uint64 line_curaddr = 0;
+  struct proc *p = myproc();
+
   printf("backtrace:\n");
-  // 读取当前帧指针
-  uint64 fp = r_fp();
-  while (PGROUNDUP(fp) - PGROUNDDOWN(fp) == PGSIZE) {
-    // 返回地址保存在-8偏移的位置
-    uint64 ret_addr = *(uint64*)(fp - 8);
-    printf("%p\n", ret_addr);
-    // 前一个帧指针保存在-16偏移的位置
+  if (user) {
+    fp = p->trapframe->s0;
+    end = p->addrinfo.logical_stack_top;
+    printf("0x%lx\n", p->trapframe->epc);
+  } else {
+    fp = r_fp();
+    end = p->kstackbase + PGSIZE;
+  }
+  while (fp != end) {
+    addr = *(uint64*)(fp - 8);
+    // dump file and line
+    char linefile[32];
+    if (user)
+      snprintf(linefile, sizeof(linefile), ".%s_lineinfo.txt", myproc()->name);
+    else
+      strcpy(linefile, ".kernel_lineinfo.txt");
+    char linebuf[256], lastline[8], lastfilename[64];
+    while (file_readline(linefile, linebuf) != 0) {
+      char *tokens[3]; 
+      int cnt = 0;
+      char *token = strtok(linebuf, " ");
+      while (token != NULL) {
+        tokens[cnt++] = token;
+        token = strtok(NULL, "/");
+      }
+      strcpy(lastline, tokens[1]);
+      strcpy(lastfilename, tokens[2]);
+
+      line_curaddr = stolu(tokens[0]);
+      if (addr < line_curaddr) {
+        printf("%s:%s\n", lastfilename, lastline);
+        break;
+      }
+    } 
     fp = *(uint64*)(fp - 16);
   }
 }

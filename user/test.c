@@ -11,36 +11,15 @@
 #include "kernel/riscv.h"
 #include "common/log.h"
 
-int
-cmd_wrapper(char* cmd, ...)
-{
-  va_list ap;
-  va_start(ap, cmd);
-
-  int pid = fork();
-  if (pid < 0) {
-    printf("fork failed\n");
-  } else if (pid == 0) {
-    char *args[MAXARG] = {cmd};
-    int idx = 1;
-    while (1) {
-      args[idx++] = va_arg(ap, char *);
-      if (args[idx - 1] == NULL)  
-        break;
-    }
-    int rc = exec(cmd, args);
-    exit(rc);
-  }
-  int state;
-  wait(&state);
-  return state;
+void func(){
+  int *a = NULL;
+  printf("%d\n", *a);
 }
 
 int main()
 {
-  int pid = fork();
-  if (pid == 0)
-    cmd_wrapper("/cp", "/1234", "/4321", NULL);
-  wait(0);
+  func();
+  func();
+  func();
 	exit(0);
 }

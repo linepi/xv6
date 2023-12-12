@@ -117,6 +117,8 @@ exec(char *path, char **argv)
   // Commit to the user image.
   p_new.trapframe->epc = elf.entry;  // initial program counter = main
   p_new.trapframe->sp = sp; // initial stack pointer
+  p_new.trapframe->s0 = sp; // initial frame top
+  p_new.addrinfo.logical_stack_top = sp; // initial frame top
   p_new.addrinfo.heap_start = HEAP_START(p);
   p_new.addrinfo.heap_end = p_new.addrinfo.heap_start;
   *p = p_new;

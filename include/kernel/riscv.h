@@ -303,7 +303,7 @@ r_sp()
   return x;
 }
 
-static inline uint64
+static inline uint64 __attribute__((always_inline))
 r_fp()
 {
   uint64 x;

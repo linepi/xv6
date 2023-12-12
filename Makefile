@@ -4,28 +4,27 @@ MEMORY=128
 
 TOOLPREFIX = riscv64-unknown-elf-
 FS_IMG = build/fs.img
-FS_IMG_FILES = README Makefile LICENSE $(U_PROGS) $(K_OBJ_DIR)/kernel
+FS_IMG_FILES = README Makefile LICENSE $(U_PROGS)
 
 QEMU = qemu-system-riscv64
 BUILD_DIR = build
 U_OBJ_DIR = $(BUILD_DIR)/$U
 K_OBJ_DIR = $(BUILD_DIR)/$K
 
-U_SRCS = $(filter-out $U/forktest.c $(shell find $U/lib -name "*"), $(shell find $U -name "*.[c]"))
+U_SRCS = $(filter-out $(shell find $U/lib -name "*"), $(shell find $U -name "*.[c]"))
 U_LIB_OBJS = $(patsubst %.c, $(BUILD_DIR)/%.o, $(shell find $U/lib -name "*.[c]")) $(U_OBJ_DIR)/usys.o
-U_SRC_OBJS = $(patsubst %.c, $(BUILD_DIR)/%.o, $(U_SRCS))
 U_PROGS = $(addprefix $(U_OBJ_DIR)/_, $(basename $(notdir $(U_SRCS))))
 
 K_OBJS = $(patsubst %.c, $(BUILD_DIR)/%.o, $(patsubst %.S, $(BUILD_DIR)/%.o, $(shell find $K -name "*.[cS]")))
 
-CC = $(TOOLPREFIX)gcc
-AS = $(TOOLPREFIX)gcc
-LD = $(TOOLPREFIX)ld
+CC = ccache $(TOOLPREFIX)gcc
+AS = ccache $(TOOLPREFIX)gcc
+LD = ccache $(TOOLPREFIX)ld
 OBJCOPY = $(TOOLPREFIX)objcopy
 OBJDUMP = $(TOOLPREFIX)objdump
 
 CFLAGS = -Wall -Werror -O0 -fno-omit-frame-pointer -ggdb3
-CFLAGS += -MD -Wno-infinite-recursion -Wno-unused-function -Wno-unused-variable -Wno-unused-but-set-variable
+CFLAGS += -MMD -Wno-infinite-recursion -Wno-unused-function -Wno-unused-variable -Wno-unused-but-set-variable
 CFLAGS += -DMEMORY_SIZE_MEGABYTES=$(MEMORY)
 CFLAGS += -mcmodel=medany
 CFLAGS += -ffreestanding -fno-common -nostdlib -mno-relax
@@ -48,6 +47,7 @@ $(K_OBJ_DIR)/kernel: $(K_OBJS) $K/kernel.ld $(U_OBJ_DIR)/initcode
 	$(LD) $(LDFLAGS) -T $K/kernel.ld -o $(K_OBJ_DIR)/kernel $(K_OBJ_DIR)/entry.o $(filter-out $(K_OBJ_DIR)/entry.o,$(K_OBJS)) 
 	$(OBJDUMP) -S $(K_OBJ_DIR)/kernel > $(K_OBJ_DIR)/kernel.asm
 	$(OBJDUMP) -t $(K_OBJ_DIR)/kernel | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $(K_OBJ_DIR)/kernel.sym
+	$(OBJDUMP) --dwarf=decodedline $@ | tools/debuglineinfo.py > $(K_OBJ_DIR)/.kernel_lineinfo.txt
 
 $(U_OBJ_DIR)/initcode: $U/initcode.S
 	@echo "$(ANSI_FG_GREEN)+ CC $(ANSI_NONE)$@"
@@ -66,26 +66,15 @@ $(BUILD_DIR)/%.o: %.c
 $(BUILD_DIR)/%.o: %.S
 	@echo "$(ANSI_FG_GREEN)+ AS $(ANSI_NONE)$@"
 	@mkdir -p $(dir $@)
-	$(CC) -c -o $@ $<
+	$(CC) $(CFLAGS) -c -o $@ $<
 
-_%: %.o $(U_LIB_OBJS)
+$(U_OBJ_DIR)/_%: $(U_OBJ_DIR)/%.o $(U_LIB_OBJS)
 	@echo "$(ANSI_FG_GREEN)+ LD $(ANSI_NONE)$@"
 	@mkdir -p $(dir $@)
 	$(LD) $(LDFLAGS) -N -e main -o $@ $^
-	$(OBJDUMP) -S $@ > $*.asm
-	$(OBJDUMP) -t $@ | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $*.sym
-
-$(U_OBJ_DIR)/usys.o: $U/usys.S
-	@echo "$(ANSI_FG_GREEN)+ AS $(ANSI_NONE)$@"
-	@mkdir -p $(dir $@)
-	$(CC) $(CFLAGS) -c -o $@ $<
-
-$U/_forktest: $U/forktest.o $(U_LIB_OBJS)
-	# forktest has less library code linked in - needs to be small
-	# in order to be able to max out the proc table.
-	@echo "$(ANSI_FG_GREEN)+ LD $(ANSI_NONE)$@"
-	$(LD) $(LDFLAGS) -N -e main -o $U/_forktest $U/forktest.o $U/ulib.o $U/usys.o
-	$(OBJDUMP) -S $U/_forktest > $U/forktest.asm
+	$(OBJDUMP) -S $@ > $(U_OBJ_DIR)/$*.asm
+	$(OBJDUMP) -t $@ | sed '1,/SYMBOL TABLE/d; s/ .* / /; /^$$/d' > $(U_OBJ_DIR)/$*.sym
+	$(OBJDUMP) --dwarf=decodedline $@ | tools/debuglineinfo.py > $(U_OBJ_DIR)/.$*_lineinfo.txt
 
 build/mkfs: tools/mkfs.c include/kernel/fs.h include/kernel/param.h
 	@echo "$(ANSI_FG_GREEN)+ CC $(ANSI_NONE)$@"
@@ -93,7 +82,8 @@ build/mkfs: tools/mkfs.c include/kernel/fs.h include/kernel/param.h
 
 $(FS_IMG): build/mkfs $(FS_IMG_FILES)
 	@echo "$(ANSI_FG_GREEN)+ $@ $(ANSI_NONE)"
-	build/mkfs $@ $(FS_IMG_FILES)
+	build/mkfs $@ $(FS_IMG_FILES) $(DEBUG_INFO_FILES) \
+		$(shell find $(U_OBJ_DIR) -name "*_lineinfo.txt") $(shell find $(K_OBJ_DIR) -name "*_lineinfo.txt")
 
 -include $(K_OBJ_DIR)/*.d $(U_OBJ_DIR)/*.d
 

@@ -72,6 +72,10 @@ static void
 printx64(int fd, uint64 x)
 {
   int i, notzero = 0;
+  if (x == 0) {
+    putc(fd, '0');
+    return;
+  }
   for (i = 0; i < (sizeof(uint64) * 2); i++, x <<= 4) {
     char c = digits[x >> (sizeof(uint64) * 8 - 4)];
     if (c != '0')
@@ -85,6 +89,10 @@ static void
 printx32(int fd, uint32 x)
 {
   int i, notzero = 0;
+  if (x == 0) {
+    putc(fd, '0');
+    return;
+  }
   for (i = 0; i < (sizeof(uint32) * 2); i++, x <<= 4) {
     char c = digits[x >> (sizeof(uint32) * 8 - 4)];
     if (c != '0')

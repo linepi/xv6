@@ -246,14 +246,12 @@ do_page_fault(struct proc *p, uint64 stval)
     if (cowpage(p, stval)) { // this is copy on write
       if (uvmrealloc(p, PGROUNDDOWN(stval)) != 0) {
         printf("out of memory for cow(stval=0x%lx pid=%d sepc=0x%lx)\n", stval, p->pid, r_sepc());
-        pre_freeproc(p); // pre free proc
-        p->killed = 1;
+        goto bad;
       }
     } else if (stval >= PROC_HEAP_BASE(p) && stval < PROC_HEAP_END(p)) { // lazy
       if (uvmalloc(p, PGROUNDDOWN(stval), PGROUNDDOWN(stval) + PGSIZE) == -1) {
         printf("out of memory for lazy(stval=0x%lx pid=%d sepc=0x%lx)\n", stval, p->pid, r_sepc());
-        pre_freeproc(p); // pre free proc
-        p->killed = 1;
+        goto bad;
       }
     } else if (stval >= PROC_STACK_BASE(p) && stval < PROC_STACK_END(p)) { // stack grows down
       // lazy deal stack grows, only alloc memory that triggers page fault.
@@ -261,15 +259,19 @@ do_page_fault(struct proc *p, uint64 stval)
       // freed in freeproc stage.
       if (uvmalloc(p, PGROUNDDOWN(stval), PGROUNDDOWN(stval) + PGSIZE) == -1) {
         printf("out of memory for stack(stval=0x%lx pid=%d sepc=0x%lx)\n", stval, p->pid, r_sepc());
-        pre_freeproc(p); // pre free proc
-        p->killed = 1;
+        goto bad;
       }
     } else {
       printf("segmentation fault on valid 0x%lx(pid=%d sepc=0x%lx)\n", stval, p->pid, r_sepc());
-      p->killed = 1;
+      goto bad;
     }
   } else {
     printf("segmentation fault on invalid 0x%lx(pid=%d sepc=0x%lx)\n", stval, p->pid, r_sepc());
-    p->killed = 1;
+    goto bad;
   }
+  return;
+bad:
+  backtrace(1);
+  pre_freeproc(p); // pre free proc
+  p->killed = 1;
 }

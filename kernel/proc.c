@@ -223,7 +223,7 @@ extern char etext[];  // kernel.ld sets this to end of kernel code.
 pagetable_t
 proc_kpagetable(struct proc *p)
 {
-  struct kpagetable_wrapper *kpw;
+  struct kpagetable_wrapper *kpw = NULL;
 
   acquire(&kpool_lock);
   int i;
@@ -382,6 +382,7 @@ userinit(void)
 
   p->addrinfo.vm_offset = 0;
   p->addrinfo.program_sz = sizeof(initcode);
+  p->addrinfo.logical_stack_top = PGSIZE;
 
   // prepare for the very first "return" from kernel to user.
   p->trapframe->epc = 0;      // user program counter

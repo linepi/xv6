@@ -104,7 +104,7 @@ sys_trace(void)
   return 0;
 }
 
-int
+uint64
 sys_pgaccess(void)
 {
   uint64 addr; // 虚拟页起始地址
