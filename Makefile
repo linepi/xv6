@@ -23,7 +23,7 @@ LD = ccache $(TOOLPREFIX)ld
 OBJCOPY = $(TOOLPREFIX)objcopy
 OBJDUMP = $(TOOLPREFIX)objdump
 
-CFLAGS = -Wall -Werror -O0 -fno-omit-frame-pointer -ggdb3
+CFLAGS = -Wall -Werror -Og -fno-omit-frame-pointer -ggdb3
 CFLAGS += -MMD -Wno-infinite-recursion -Wno-array-bounds
 CFLAGS += -DMEMORY_SIZE_MEGABYTES=$(MEMORY)
 CFLAGS += -mcmodel=medany
@@ -84,8 +84,8 @@ $(FS_IMG): build/mkfs $(FS_IMG_FILES)
 	@echo "$(ANSI_FG_GREEN)+ $@ $(ANSI_NONE)"
 	build/mkfs $(FS_IMG) \
 		--dir /.lineinfo $(shell find $(U_OBJ_DIR) -name "*_lineinfo.txt") $(shell find $(K_OBJ_DIR) -name "*_lineinfo.txt") \
-		--dir / $(FS_IMG_FILES)
-		
+		--dir /bin $(U_PROGS) \
+		--dir / README Makefile LICENSE
 
 -include $(K_OBJ_DIR)/*.d $(U_OBJ_DIR)/*.d
 
@@ -109,12 +109,6 @@ qemu: $(K_OBJ_DIR)/kernel $(FS_IMG)
 qemu-gdb: $(K_OBJ_DIR)/kernel $(FS_IMG)
 	@echo "Now run 'gdb' in another window." 1>&2
 	$(QEMU) $(QEMUOPTS) -S $(QEMUGDB)
-
-fs: build/mkfs
-	@echo "$(ANSI_FG_GREEN)+ $@ $(ANSI_NONE)"
-	build/mkfs $(FS_IMG) \
-		--dir /.lineinfo $(shell find $(U_OBJ_DIR) -name "*_lineinfo.txt") $(shell find $(K_OBJ_DIR) -name "*_lineinfo.txt") \
-		--dir / $(FS_IMG_FILES)
 
 all: $(K_OBJ_DIR)/kernel $(FS_IMG)
 .DEFAULT_GOAL := all

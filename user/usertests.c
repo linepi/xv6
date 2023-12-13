@@ -175,7 +175,7 @@ copyinstr2(char *s)
       big[i] = 'x';
     big[PGSIZE] = '\0';
     char *args2[] = { big, big, big, 0 };
-    ret = exec("echo", args2);
+    ret = exec("/bin/echo", args2);
     if(ret != -1){
       LOG("exec(echo, BIG) returned %d, not -1\n", fd);
       exit(1);
@@ -518,7 +518,7 @@ opentest(char *s)
 {
   int fd;
 
-  fd = open("echo", 0);
+  fd = open("/bin/echo", 0);
   if(fd < 0){
     LOG("%s: open echo failed!\n", s);
     exit(1);
@@ -681,7 +681,7 @@ void
 exectest(char *s)
 {
   int fd, xstatus, pid;
-  char *echoargv[] = { "echo", "OK", 0 };
+  char *echoargv[] = { "/bin/echo", "OK", 0 };
   char buf[3];
 
   unlink("echo-ok");
@@ -701,7 +701,7 @@ exectest(char *s)
       LOG("%s: wrong fd\n", s);
       exit(1);
     }
-    if(exec("echo", echoargv) < 0){
+    if(exec("/bin/echo", echoargv) < 0){
       LOG("%s: exec echo failed\n", s);
       exit(1);
     }
@@ -1538,6 +1538,8 @@ bigdir(char *s)
   close(fd);
 
   for(i = 0; i < N; i++){
+    if (i % 50 == 0)
+      printf(".");
     name[0] = 'x';
     name[1] = '0' + (i / 64);
     name[2] = '0' + (i % 64);
@@ -1550,6 +1552,8 @@ bigdir(char *s)
 
   unlink("bd");
   for(i = 0; i < N; i++){
+    if (i % 50 == 0)
+      printf(".");
     name[0] = 'x';
     name[1] = '0' + (i / 64);
     name[2] = '0' + (i % 64);
@@ -2406,7 +2410,7 @@ bigargtest(char *s)
     for(i = 0; i < MAXARG-1; i++)
       args[i] = "bigargs test: failed\n                                                                                                                                                                                                       ";
     args[MAXARG-1] = 0;
-    exec("echo", args);
+    exec("/bin/echo", args);
     fd = open("bigarg-ok", O_CREATE);
     close(fd);
     exit(0);
@@ -2482,7 +2486,7 @@ fsfull()
 void argptest(char *s)
 {
   int fd;
-  fd = open("init", O_RDONLY);
+  fd = open("/bin/init", O_RDONLY);
   if (fd < 0) {
     LOG("%s: open failed\n", s);
     exit(1);
@@ -2638,7 +2642,7 @@ badarg(char *s)
     char *argv[2];
     argv[0] = (char*)0xffffffff;
     argv[1] = 0;
-    exec("echo", argv);
+    exec("/bin/echo", argv);
   }
   
   exit(0);
@@ -2715,7 +2719,7 @@ execout(char *s)
       
       close(1);
       char *args[] = { "echo", "x", 0 };
-      exec("echo", args);
+      exec("/bin/echo", args);
       exit(0);
     } else {
       wait((int*)0);
@@ -2860,7 +2864,7 @@ dealloc:
 void
 cpmvtest(char *testname)
 {
-  char *files[] = {"/LICENSE", "/Makefile", "/ls", "/init", "/README", "/echo", 0};
+  char *files[] = {"/LICENSE", "/Makefile", "/bin/ls", "/bin/init", "/README", "/bin/echo", 0};
   char dirname[MAXPATH] = "/cptest_tmp1";
   char dirname2[MAXPATH] = "/cptest_tmp2";
   char dirname3[MAXPATH] = "/cptest_tmp3";
@@ -2876,15 +2880,15 @@ cpmvtest(char *testname)
     char file3[MAXPATH];
     snprintf(file2, MAXPATH, "%s%d", file, 2);
     snprintf(file3, MAXPATH, "%s%d", file, 3);
-    if (cmd_wrapper("/cp", file, file2, NULL) != 0) {
+    if (cmd_wrapper("/bin/cp", file, file2, NULL) != 0) {
       LOG("%s: cp failed\n", testname);
       exit(1);
     }
-    if (cmd_wrapper("/mv", file2, file3, NULL) != 0) {
+    if (cmd_wrapper("/bin/mv", file2, file3, NULL) != 0) {
       LOG("%s: mv failed\n", testname);
       exit(1);
     }
-    if (cmd_wrapper("/cp", file, file2, NULL) != 0) {
+    if (cmd_wrapper("/bin/cp", file, file2, NULL) != 0) {
       LOG("%s: cp failed\n", testname);
       exit(1);
     }
@@ -2914,27 +2918,27 @@ cpmvtest(char *testname)
 
   for (int i = 0; files[i]; i++) {
     char *file = files[i];
-    if (cmd_wrapper("/cp", file, dirname, NULL) != 0) {
+    if (cmd_wrapper("/bin/cp", file, dirname, NULL) != 0) {
       LOG("%s: cp failed\n", testname);
       ret = 1;
       goto end;
     }
   }
 
-  if (cmd_wrapper("/cp", dirname, dirname2, NULL) != 0) {
+  if (cmd_wrapper("/bin/cp", dirname, dirname2, NULL) != 0) {
     LOG("%s: cp failed\n", testname);
     ret = 1;
     goto end;
   }
   dir2 = 1;
-  if (cmd_wrapper("/mv", dirname2, dirname3, NULL) != 0) {
+  if (cmd_wrapper("/bin/mv", dirname2, dirname3, NULL) != 0) {
     LOG("%s: mv failed\n", testname);
     ret = 1;
     goto end;
   }
   dir3 = 1;
   dir2 = 0;
-  if (cmd_wrapper("/cp", dirname, dirname2, NULL) != 0) {
+  if (cmd_wrapper("/bin/cp", dirname, dirname2, NULL) != 0) {
     LOG("%s: cp failed\n", testname);
     ret = 1;
     goto end;

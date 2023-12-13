@@ -15,7 +15,7 @@
 #define MAXARGS 10
 
 char cwd[MAXPATH] = "/";
-char *env[] = {"", "/", 0};
+char *env[] = {"", "/", "/bin", 0};
 int laststate;
 
 struct cmd {
@@ -81,9 +81,10 @@ runcmd(struct cmd *cmd)
     if(ecmd->argv[0] == 0)
       exit(1);
     int ret = 0;
-    for (char **p = &env[0]; *p != 0; p++) {
+    for (int i = 0; env[i]; i++) {
       char buf[MAXPATH];
-      strcpy(buf, *p);
+      strcpy(buf, env[i]);
+      strcat(buf, "/");
       strcat(buf, ecmd->argv[0]);
       ret = exec(buf, ecmd->argv);
     }
