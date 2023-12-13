@@ -5,6 +5,7 @@
 #include "common/log.h"
 
 int show_dot = 0;
+int verbose = 0;
 
 char*
 fmtname(char *path)
@@ -93,17 +94,28 @@ int
 main(int argc, char *argv[])
 {
   int i;
+  int arg_start = 1;
+  int arg_cnt = argc - 1;
 
   for (int i = 0; i < argc; i++) {
-    if (strcmp(argv[i], "-a") == 0)
+    if (strcmp(argv[i], "-a") == 0) {
       show_dot = 1;
+      arg_start++;
+      arg_cnt--;
+    }
+    if (strcmp(argv[i], "-l") == 0) {
+      verbose = 1;
+      arg_start++;
+      arg_cnt--;
+    }
   }
 
-  if(argc < 2){
+  if(arg_cnt == 0){
     ls(".");
     exit(0);
   }
-  for(i=1; i<argc; i++)
+
+  for(i = arg_start; i < arg_start + arg_cnt; i++)
     ls(argv[i]);
   exit(0);
 }

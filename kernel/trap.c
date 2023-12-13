@@ -271,7 +271,10 @@ do_page_fault(struct proc *p, uint64 stval)
   }
   return;
 bad:
-  backtrace(1);
+  if (r_sstatus() & SSTATUS_SPP)
+    backtrace(1, 0);
+  else
+    backtrace(1, 1);
   pre_freeproc(p); // pre free proc
   p->killed = 1;
 }

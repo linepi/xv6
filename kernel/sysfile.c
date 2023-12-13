@@ -246,7 +246,7 @@ create(char *path, short type, short major, short minor)
   char name[DIRSIZ];
 
   if((dp = nameiparent(path, name)) == 0)
-    return 0;
+    return NULL;
 
   ilock(dp);
 
@@ -256,7 +256,7 @@ create(char *path, short type, short major, short minor)
     if(type == T_FILE && (ip->type == T_FILE || ip->type == T_DEVICE))
       return ip;
     iunlockput(ip);
-    return 0;
+    return NULL;
   }
 
   if((ip = ialloc(dp->dev, type)) == 0)

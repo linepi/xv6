@@ -48,8 +48,8 @@ void            iunlock(struct inode*);
 void            iunlockput(struct inode*);
 void            iupdate(struct inode*);
 int             namecmp(const char*, const char*);
-struct inode*   namei(char*);
-struct inode*   nameiparent(char*, char*);
+struct inode*   namei(const char*);
+struct inode*   nameiparent(const char*, char*);
 int             readi(struct inode*, int, uint64, uint, uint);
 void            stati(struct inode*, struct stat*);
 int             writei(struct inode*, int, uint64, uint, uint);
@@ -91,7 +91,7 @@ void            printf(const char*, ...);
 void            panic(const char*, ...) __attribute__((noreturn));
 void            assert(int);
 void            printfinit(void);
-void            backtrace(int);
+void            backtrace(int, int);
 
 // proc.c
 int             cpuid(void);
@@ -153,6 +153,8 @@ int             strcmp(const char*, const char*);
 char *					strcat(char *s, const char *append);
 char*           strncpy(char*, const char*, int);
 char*           strcpy(char*, const char*);
+char*						strchr(const char *s, char c);
+char*						strrchr(const char *s, char c);
 char *					strtok(char *s, const char *delim);
 char *					strtok_r(char *s, const char *delim, char **last);
 

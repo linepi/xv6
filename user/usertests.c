@@ -576,6 +576,7 @@ void
 writebig(char *s)
 {
   int i, fd, n;
+  int maxblock = NDIRECT + 2 * NINDIRECT;
 
   fd = open("big", O_CREATE|O_RDWR);
   if(fd < 0){
@@ -583,7 +584,9 @@ writebig(char *s)
     exit(1);
   }
 
-  for(i = 0; i < MAXFILE_BLOCKS; i++){
+  for(i = 0; i < maxblock; i++){
+    if (i % 50 == 0)
+      printf(".");
     ((int*)buf)[0] = i;
     if(write(fd, buf, BLOCK_SIZE) != BLOCK_SIZE){
       LOG("%s: error: write big file failed\n", s, i);
@@ -601,9 +604,11 @@ writebig(char *s)
 
   n = 0;
   for(;;){
+    if (i % 50 == 0)
+      printf(".");
     i = read(fd, buf, BLOCK_SIZE);
     if(i == 0){
-      if(n == MAXFILE_BLOCKS - 1){
+      if(n == maxblock - 1){
         LOG("%s: read only %d blocks from big", s, n);
         exit(1);
       }
@@ -2597,6 +2602,8 @@ badwrite(char *s)
   
   unlink("junk");
   for(int i = 0; i < assumed_free; i++){
+    if (i % 30 == 0)
+    printf(".");
     int fd = open("junk", O_CREATE|O_WRONLY);
     if(fd < 0){
       LOG("open junk failed\n");
@@ -3199,15 +3206,15 @@ main(int argc, char *argv[])
     {dirfile, "dirfile"},
     {iref, "iref"},
     {forktest, "forktest"},
-    {bigdir, "bigdir"}, // slow
     {ugetpidtest, "ugetpid"}, 
     {pgaccesstest, "pgaccess"}, 
     {recursion, "recursion"},
     {stackoverflow, "stackoverflow"},
     {cpmvtest, "cpmvtest"},
-    {largefile, "largefile"},
-    // {badwrite, "badwrite" },
-    // {writebig, "writebig"},
+    {badwrite, "badwrite" },
+    {writebig, "writebig"},
+    {bigdir, "bigdir"}, // slow
+    // {largefile, "largefile"}, // very slow
     { 0, 0},
   };
 

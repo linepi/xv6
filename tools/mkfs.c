@@ -67,22 +67,33 @@ xint(uint x)
 int
 main(int argc, char *argv[])
 {
-  int i, cc, fd;
+  int i, j, cc, fd;
   uint root_inode_no, inum, off;
   struct dirent dir;
   char buf[BLOCK_SIZE];
   struct dinode din;
-
+  int dir_argi[8]; // max support dir: 8
+  int len_dir = 0;
 
   static_assert(sizeof(int) == 4, "Integers must be 4 bytes!");
+  assert((BLOCK_SIZE % sizeof(struct dinode)) == 0);
+  assert((BLOCK_SIZE % sizeof(struct dirent)) == 0);
 
-  if(argc < 2){
-    fprintf(stderr, "Usage: mkfs fs.img files...\n");
+  if(argc < 3){
+    fprintf(stderr, "Usage: mkfs fs.img [--dir <dirname>] files... [--dir <dirname> files...]\n");
     exit(1);
   }
 
-  assert((BLOCK_SIZE % sizeof(struct dinode)) == 0);
-  assert((BLOCK_SIZE % sizeof(struct dirent)) == 0);
+  for (int i = 0; i < argc; i++) {
+    if (strcmp(argv[i], "--dir") == 0) {
+      if (argv[i + 1][0] != '/') {
+        fprintf(stderr, "dirname must be absolute path\n");
+        exit(1);
+      }
+      dir_argi[len_dir++] = i + 1;
+    }
+  }
+  dir_argi[len_dir] = argc + 1;
 
   fsfd = open(argv[1], O_RDWR|O_CREAT|O_TRUNC, 0666);
   if(fsfd < 0)
@@ -131,39 +142,47 @@ main(int argc, char *argv[])
   strcpy(dir.name, "..");
   iappend(root_inode_no, &dir, sizeof(dir));
 
-  for(i = 2; i < argc; i++){
-    // get rid of "user/"
-    char *shortname;
-    if(strncmp(argv[i], "build/user/", 11) == 0)
-      shortname = argv[i] + 11;
-    else if (strncmp(argv[i], "build/kernel/", 13) == 0)
-      shortname = argv[i] + 13;
-    else
-      shortname = argv[i];
-    
-    assert(index(shortname, '/') == 0);
+  for (i = 0; i < len_dir; i++) {
+    char *dirname = argv[dir_argi[i]];
+    int dir_inode_no = root_inode_no;
+    if (strcmp(dirname, "/") != 0) {
+      inum = inode_alloc(T_DIR);
+      bzero(&dir, sizeof(dir));
+      dir.inum = xshort(inum);
+      strncpy(dir.name, dirname + 1, DIRSIZ); // assume just one level dir
+      iappend(root_inode_no, &dir, sizeof(dir));
+      dir_inode_no = inum;
+    }
+    for (j = dir_argi[i] + 1; j < dir_argi[i+1] - 1; j++) {
+      char *shortname;
+      if(strncmp(argv[j], "build/user/", 11) == 0)
+        shortname = argv[j] + 11;
+      else if (strncmp(argv[j], "build/kernel/", 13) == 0)
+        shortname = argv[j] + 13;
+      else
+        shortname = argv[j];
+      assert(index(shortname, '/') == 0);
 
-    if((fd = open(argv[i], 0)) < 0)
-      die(argv[i]);
+      if((fd = open(argv[j], 0)) < 0)
+        die(argv[j]);
+      // Skip leading _ in name when writing to file system.
+      // The binaries are named _rm, _cat, etc. to keep the
+      // build operating system from trying to execute them
+      // in place of system binaries like rm and cat.
+      if(shortname[0] == '_')
+        shortname += 1;
+      inum = inode_alloc(T_FILE);
 
-    // Skip leading _ in name when writing to file system.
-    // The binaries are named _rm, _cat, etc. to keep the
-    // build operating system from trying to execute them
-    // in place of system binaries like rm and cat.
-    if(shortname[0] == '_')
-      shortname += 1;
+      bzero(&dir, sizeof(dir));
+      dir.inum = xshort(inum);
+      strncpy(dir.name, shortname, DIRSIZ);
+      iappend(dir_inode_no, &dir, sizeof(dir));
 
-    inum = inode_alloc(T_FILE);
+      while((cc = read(fd, buf, sizeof(buf))) > 0)
+        iappend(inum, buf, cc);
 
-    bzero(&dir, sizeof(dir));
-    dir.inum = xshort(inum);
-    strncpy(dir.name, shortname, DIRSIZ);
-    iappend(root_inode_no, &dir, sizeof(dir));
-
-    while((cc = read(fd, buf, sizeof(buf))) > 0)
-      iappend(inum, buf, cc);
-
-    close(fd);
+      close(fd);
+    }
   }
 
   // fix size of root inode dir
@@ -174,7 +193,6 @@ main(int argc, char *argv[])
   winode(root_inode_no, &din);
 
   bitmap_alloc(freeblock);
-
   exit(0);
 }
 

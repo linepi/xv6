@@ -120,6 +120,25 @@ safestrcpy(char *s, const char *t, int n)
   return os;
 }
 
+char*
+strchr(const char *s, char c)
+{
+  for(; *s; s++)
+    if(*s == c)
+      return (char*)s;
+  return 0;
+}
+
+char*
+strrchr(const char *s, char c)
+{
+  char *ret = NULL;
+  for(; *s; s++)
+    if(*s == c)
+      ret = (char *)s;
+  return ret;
+}
+
 int
 strlen(const char *s)
 {

@@ -10,6 +10,7 @@
 #include "kernel/sleeplock.h"
 #include "kernel/fs.h"
 #include "kernel/file.h"
+#include "kernel/file.h"
 #include "kernel/memlayout.h"
 #include "kernel/riscv.h"
 #include "kernel/defs.h"
@@ -240,6 +241,7 @@ panic(const char *fmt, ...)
   va_start(ap, fmt);
   vprintf(fmt, ap);
   printf(ANSI_FMT("\nsome info: \n", ANSI_FG_CYAN));
+  backtrace(0, 0);
   procdump();
   panicked = 1; // freeze uart output from other CPUs
   for(;;)
@@ -260,57 +262,104 @@ printfinit(void)
   pr.locking = 1;
 }
 
-// to be implemented
-int
-file_readline(const char *file, char *buf)
+#define LINE_LEN 40
+
+const char *
+addr2line(const char *lineinfo_file, uint64 addr)
 {
-  return 0;
+  static char res[256];
+  char linebuf[256]; 
+  struct inode *ip;
+
+  begin_op();
+  assert((ip = namei(lineinfo_file)) != NULL);
+  end_op();
+  ilock(ip);
+
+  // first: get the line associate with the addr
+  // use Bisection method
+  uint64 maddr;
+  int lline = 0;
+  int rline = ip->size/(LINE_LEN + 1) - 1;
+  int mline = (lline + rline) / 2;
+
+  while (lline < rline) {
+    // get addr associate with left line and right line
+    readi(ip, 0, (uint64)linebuf, mline * (LINE_LEN + 1), LINE_LEN);
+    linebuf[LINE_LEN] = 0;
+    strchr(linebuf, ' ')[0] = 0;
+    maddr = stolu(linebuf);
+    if (addr < maddr) {
+      rline = mline - 1;
+    } else {
+      lline = mline + 1;
+    } 
+    mline = (lline + rline) / 2;
+  }
+
+  readi(ip, 0, (uint64)linebuf, mline * (LINE_LEN + 1), LINE_LEN);
+  linebuf[LINE_LEN] = 0;
+  strchr(linebuf, ' ')[0] = 0;
+  maddr = stolu(linebuf);
+  if (maddr > addr)
+    mline--;
+
+  // second: read the line and decode it
+  readi(ip, 0, (uint64)linebuf, mline * (LINE_LEN + 1), LINE_LEN);
+  linebuf[LINE_LEN] = 0;
+  // third: make the result
+  snprintf(res, sizeof(res), "%s", linebuf);
+  iunlock(ip);
+  return res;
 }
 
 /**
  * @brief backtrace 回溯函数调用的返回地址
  */
 void
-backtrace(int user) {
-  uint64 fp, end, addr;
-  uint64 line_curaddr = 0;
+backtrace(int user, int lineinfo) {
+  uint64 fp, end;
+  uint64 addr; 
+  uint64 lastaddr = 0;
+  char linefile[64] = "";
+  int time = 0;
   struct proc *p = myproc();
+  // dump file and line
+
+  if (lineinfo) {
+    if (user)
+      snprintf(linefile, sizeof(linefile), "/.lineinfo/.%s_lineinfo.txt", myproc()->name);
+    else
+      strcpy(linefile, "/.lineinfo/.kernel_lineinfo.txt");
+  }
 
   printf("backtrace:\n");
   if (user) {
     fp = p->trapframe->s0;
     end = p->addrinfo.logical_stack_top;
-    printf("0x%lx\n", p->trapframe->epc);
+    if (lineinfo)
+      printf("%s\n", addr2line(linefile, p->trapframe->epc));
+    else
+      printf("0x%lx\n", p->trapframe->epc);
   } else {
     fp = r_fp();
     end = p->kstackbase + PGSIZE;
   }
+
   while (fp != end) {
     addr = *(uint64*)(fp - 8);
-    // dump file and line
-    char linefile[32];
-    if (user)
-      snprintf(linefile, sizeof(linefile), ".%s_lineinfo.txt", myproc()->name);
-    else
-      strcpy(linefile, ".kernel_lineinfo.txt");
-    char linebuf[256], lastline[8], lastfilename[64];
-    while (file_readline(linefile, linebuf) != 0) {
-      char *tokens[3]; 
-      int cnt = 0;
-      char *token = strtok(linebuf, " ");
-      while (token != NULL) {
-        tokens[cnt++] = token;
-        token = strtok(NULL, "/");
-      }
-      strcpy(lastline, tokens[1]);
-      strcpy(lastfilename, tokens[2]);
-
-      line_curaddr = stolu(tokens[0]);
-      if (addr < line_curaddr) {
-        printf("%s:%s\n", lastfilename, lastline);
-        break;
-      }
-    } 
+    if (lastaddr != addr) {
+      if (time != 0)
+        printf("%d more times...\n", time);
+      time = 0;
+      if (lineinfo)
+        printf("%s\n", addr2line(linefile, addr));
+      else
+        printf("0x%lx\n", addr);
+    } else {
+      time++;
+    }
     fp = *(uint64*)(fp - 16);
+    lastaddr = addr;
   }
 }

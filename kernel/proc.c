@@ -114,7 +114,7 @@ allocproc(void)
       release(&p->lock);
     }
   }
-  return 0;
+  return NULL;
 
 found:
   p->pid = allocpid();
@@ -125,14 +125,14 @@ found:
   if((p->trapframe = (struct trapframe *)kalloc()) == 0){
     freeproc(p);
     release(&p->lock);
-    return 0;
+    return NULL;
   }
 
   // Allocate a usyscall page.
   if((p->usyscall = (struct usyscall *)kalloc()) == 0){
     freeproc(p);
     release(&p->lock);
-    return 0;
+    return NULL;
   } else {
     p->usyscall->pid = p->pid;
     p->usyscall->cwd[0] = '/';
@@ -144,13 +144,13 @@ found:
   if(p->pagetable == 0){
     freeproc(p);
     release(&p->lock);
-    return 0;
+    return NULL;
   } 
   p->kpagetable = proc_kpagetable(p);
   if(p->kpagetable == 0) {
     freeproc(p);
     release(&p->lock);
-    return 0;
+    return NULL;
   }
 
   // Set up new context to start executing at forkret,
@@ -195,7 +195,7 @@ proc_pagetable(struct proc *p)
   // An empty page table.
   pagetable = upagecreate();
   if(pagetable == 0)
-    return 0;
+    return NULL;
   // map the trampoline code (for system call return)
   // at the highest user virtual address.
   // only the supervisor uses it, on the way
@@ -214,7 +214,7 @@ proc_pagetable(struct proc *p)
 bad:
   // free kpgtbl
   free_pagetable(pagetable, 0);
-  return 0;
+  return NULL;
 }
 
 // Create a user kpagetable for a given process,
@@ -254,7 +254,7 @@ proc_kpagetable(struct proc *p)
   return kpw->page;
 bad:
   release(&kpool_lock);
-  return 0;
+  return NULL;
 }
 
 pagetable_t 
@@ -264,7 +264,7 @@ uclean_kpagetable()
 
   kpgtbl = (pagetable_t) kalloc();
   if (kpgtbl == 0) 
-    return 0;
+    return NULL;
   memset(kpgtbl, 0, PGSIZE);
 
   // uart registers

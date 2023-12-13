@@ -12,8 +12,8 @@
 #include "common/log.h"
 
 void func(){
-  int *a = NULL;
-  printf("%d\n", *a);
+  int a = 3;
+  printf("%d\n", a);
 }
 
 int main()

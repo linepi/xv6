@@ -40,7 +40,7 @@ filealloc(void)
     }
   }
   release(&ftable.lock);
-  return 0;
+  return NULL;
 }
 
 // Increment ref count for file f.

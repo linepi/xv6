@@ -24,10 +24,10 @@ OBJCOPY = $(TOOLPREFIX)objcopy
 OBJDUMP = $(TOOLPREFIX)objdump
 
 CFLAGS = -Wall -Werror -O0 -fno-omit-frame-pointer -ggdb3
-CFLAGS += -MMD -Wno-infinite-recursion -Wno-unused-function -Wno-unused-variable -Wno-unused-but-set-variable
+CFLAGS += -MMD -Wno-infinite-recursion -Wno-array-bounds
 CFLAGS += -DMEMORY_SIZE_MEGABYTES=$(MEMORY)
 CFLAGS += -mcmodel=medany
-CFLAGS += -ffreestanding -fno-common -nostdlib -mno-relax
+CFLAGS += -ffreestanding -fno-common -nostdlib -mno-relax -fno-builtin
 CFLAGS += -I$(XV6_HOME)/include
 CFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
 
@@ -82,8 +82,10 @@ build/mkfs: tools/mkfs.c include/kernel/fs.h include/kernel/param.h
 
 $(FS_IMG): build/mkfs $(FS_IMG_FILES)
 	@echo "$(ANSI_FG_GREEN)+ $@ $(ANSI_NONE)"
-	build/mkfs $@ $(FS_IMG_FILES) $(DEBUG_INFO_FILES) \
-		$(shell find $(U_OBJ_DIR) -name "*_lineinfo.txt") $(shell find $(K_OBJ_DIR) -name "*_lineinfo.txt")
+	build/mkfs $(FS_IMG) \
+		--dir /.lineinfo $(shell find $(U_OBJ_DIR) -name "*_lineinfo.txt") $(shell find $(K_OBJ_DIR) -name "*_lineinfo.txt") \
+		--dir / $(FS_IMG_FILES)
+		
 
 -include $(K_OBJ_DIR)/*.d $(U_OBJ_DIR)/*.d
 
@@ -107,6 +109,12 @@ qemu: $(K_OBJ_DIR)/kernel $(FS_IMG)
 qemu-gdb: $(K_OBJ_DIR)/kernel $(FS_IMG)
 	@echo "Now run 'gdb' in another window." 1>&2
 	$(QEMU) $(QEMUOPTS) -S $(QEMUGDB)
+
+fs: build/mkfs
+	@echo "$(ANSI_FG_GREEN)+ $@ $(ANSI_NONE)"
+	build/mkfs $(FS_IMG) \
+		--dir /.lineinfo $(shell find $(U_OBJ_DIR) -name "*_lineinfo.txt") $(shell find $(K_OBJ_DIR) -name "*_lineinfo.txt") \
+		--dir / $(FS_IMG_FILES)
 
 all: $(K_OBJ_DIR)/kernel $(FS_IMG)
 .DEFAULT_GOAL := all
