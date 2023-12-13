@@ -1873,45 +1873,48 @@ fourteen(char *s)
 {
   int fd;
 
-  // DIRSIZ is 14.
+  // DIRSIZ is 30. Check dir will be cut off if dir size larger than this number
+  char basedir[DIRSIZ];
+  char tmp[DIRSIZ * 4];
+  memset(basedir, '1', DIRSIZ);
 
-  if(mkdir("12345678901234") != 0){
-    LOG("%s: mkdir 12345678901234 failed\n", s);
+  if(mkdir(basedir) != 0){
+    LOG("%s: mkdir failed\n", s);
     exit(1);
   }
-  if(mkdir("12345678901234/123456789012345") != 0){
-    LOG("%s: mkdir 12345678901234/123456789012345 failed\n", s);
+
+  snprintf(tmp, sizeof(tmp), "%s/%s%c", basedir, basedir, '1');
+  if(mkdir(tmp) != 0){
+    LOG("%s: mkdir failed\n", s);
     exit(1);
   }
-  fd = open("123456789012345/123456789012345/123456789012345", O_CREATE);
+  snprintf(tmp, sizeof(tmp), "%s%c/%s%c/%s%c", basedir, '1', basedir, '1', basedir, '1');
+  fd = open(tmp, O_CREATE);
   if(fd < 0){
-    LOG("%s: create 123456789012345/123456789012345/123456789012345 failed\n", s);
+    LOG("%s: create failed\n", s);
     exit(1);
   }
   close(fd);
-  fd = open("12345678901234/12345678901234/12345678901234", 0);
+  snprintf(tmp, sizeof(tmp), "%s/%s/%s", basedir, basedir, basedir);
+  fd = open(tmp, 0);
   if(fd < 0){
-    LOG("%s: open 12345678901234/12345678901234/12345678901234 failed\n", s);
+    LOG("%s: open failed\n", s);
     exit(1);
   }
   close(fd);
 
-  if(mkdir("12345678901234/12345678901234") == 0){
-    LOG("%s: mkdir 12345678901234/12345678901234 succeeded!\n", s);
+  snprintf(tmp, sizeof(tmp), "%s/%s", basedir, basedir);
+  if(mkdir(tmp) == 0){
+    LOG("%s: mkdir succeeded!\n", s);
     exit(1);
   }
-  if(mkdir("123456789012345/12345678901234") == 0){
+  snprintf(tmp, sizeof(tmp), "%sdfjsalvdsac/%s", basedir, basedir);
+  if(mkdir(tmp) == 0){
     LOG("%s: mkdir 12345678901234/123456789012345 succeeded!\n", s);
     exit(1);
   }
 
-  // clean up
-  unlink("123456789012345/12345678901234");
-  unlink("12345678901234/12345678901234");
-  unlink("12345678901234/12345678901234/12345678901234");
-  unlink("123456789012345/123456789012345/123456789012345");
-  unlink("12345678901234/123456789012345");
-  unlink("12345678901234");
+  rmdir(basedir);
 }
 
 void
