@@ -1,5 +1,6 @@
-K=kernel
-U=user
+K=src/kernel
+U=src/user
+COM=src/common
 MEMORY=128
 
 TOOLPREFIX = riscv64-unknown-elf-
@@ -8,14 +9,15 @@ FS_IMG_FILES = README Makefile LICENSE $(U_PROGS)
 
 QEMU = qemu-system-riscv64
 BUILD_DIR = build
-U_OBJ_DIR = $(BUILD_DIR)/$U
-K_OBJ_DIR = $(BUILD_DIR)/$K
+U_OBJ_DIR = $(BUILD_DIR)/user
+K_OBJ_DIR = $(BUILD_DIR)/kernel
+
+COM_OBJS = $(patsubst src/%.c, $(BUILD_DIR)/%.o, $(shell find $(COM) -name "*.c"))
+U_LIB_OBJS = $(COM_OBJS) $(patsubst src/%.c, $(BUILD_DIR)/%.o, $(shell find $U/lib -name "*.[c]")) $(U_OBJ_DIR)/lib/usys.o
+K_OBJS = $(COM_OBJS) $(patsubst src/%.c, $(BUILD_DIR)/%.o, $(patsubst src/%.S, $(BUILD_DIR)/%.o, $(shell find $K -name "*.[cS]")))
 
 U_SRCS = $(filter-out $(shell find $U/lib -name "*"), $(shell find $U -name "*.[c]"))
-U_LIB_OBJS = $(patsubst %.c, $(BUILD_DIR)/%.o, $(shell find $U/lib -name "*.[c]")) $(U_OBJ_DIR)/usys.o
 U_PROGS = $(addprefix $(U_OBJ_DIR)/_, $(basename $(notdir $(U_SRCS))))
-
-K_OBJS = $(patsubst %.c, $(BUILD_DIR)/%.o, $(patsubst %.S, $(BUILD_DIR)/%.o, $(shell find $K -name "*.[cS]")))
 
 CC = ccache $(TOOLPREFIX)gcc
 AS = ccache $(TOOLPREFIX)gcc
@@ -24,10 +26,10 @@ OBJCOPY = $(TOOLPREFIX)objcopy
 OBJDUMP = $(TOOLPREFIX)objdump
 
 CFLAGS = -Wall -Werror -Og -fno-omit-frame-pointer -ggdb3
-CFLAGS += -MMD -Wno-infinite-recursion -Wno-array-bounds
+CFLAGS += -MMD -Wno-infinite-recursion -Wno-array-bounds -Wno-char-subscripts
 CFLAGS += -DMEMORY_SIZE_MEGABYTES=$(MEMORY)
 CFLAGS += -mcmodel=medany
-CFLAGS += -ffreestanding -fno-common -nostdlib -mno-relax -fno-builtin
+CFLAGS += -ffreestanding -fno-common -nostdlib -mno-relax
 CFLAGS += -I$(XV6_HOME)/include
 CFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
 
@@ -58,12 +60,12 @@ $(U_OBJ_DIR)/initcode: $U/initcode.S
 	$(OBJCOPY) -S -O binary $(U_OBJ_DIR)/initcode.out $(U_OBJ_DIR)/initcode
 	$(OBJDUMP) -S $(U_OBJ_DIR)/initcode.o > $(U_OBJ_DIR)/initcode.asm
 
-$(BUILD_DIR)/%.o: %.c
+$(BUILD_DIR)/%.o: src/%.c
 	@echo "$(ANSI_FG_GREEN)+ CC $(ANSI_NONE)$@"
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c -o $@ $<
 
-$(BUILD_DIR)/%.o: %.S
+$(BUILD_DIR)/%.o: src/%.S
 	@echo "$(ANSI_FG_GREEN)+ AS $(ANSI_NONE)$@"
 	@mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) -c -o $@ $<

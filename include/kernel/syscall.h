@@ -1,3 +1,4 @@
+#pragma once
 // System call numbers
 
 #ifdef __ASSEMBLER__

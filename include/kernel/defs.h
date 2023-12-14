@@ -1,4 +1,7 @@
 #pragma once
+#include "common/types.h"
+#include "kernel/riscv.h"
+
 struct block_buf;
 struct context;
 struct file;
@@ -85,13 +88,12 @@ int             piperead(struct pipe*, uint64, int);
 int             pipewrite(struct pipe*, uint64, int);
 
 // printf.c & sprintf.c
-int 						snprintf(char* str, uint64 size, const char* format, ...);
-int 						sprintf(char* str, const char* format, ...);
 void            printf(const char*, ...);
+void            pure_printf(const char*, ...);
 void            panic(const char*, ...) __attribute__((noreturn));
 void            assert(int);
 void            printfinit(void);
-void            backtrace(int, int);
+void            backtrace(int user, int lineinfo);
 
 // proc.c
 int             cpuid(void);
@@ -137,26 +139,11 @@ void            releasesleep(struct sleeplock*);
 int             holdingsleep(struct sleeplock*);
 void            initsleeplock(struct sleeplock*, char*);
 
-// stdlib.c
-int             rand();
-int             rand_r(unsigned int *);
-void            srand(uint);
-
-// string.c
-int             memcmp(const void*, const void*, uint);
-void*           memmove(void*, const void*, uint);
-void*           memset(void*, int, uint);
-char*           safestrcpy(char*, const char*, int);
-int             strlen(const char*);
-int             strncmp(const char*, const char*, uint);
-int             strcmp(const char*, const char*);
-char *					strcat(char *s, const char *append);
-char*           strncpy(char*, const char*, int);
-char*           strcpy(char*, const char*);
-char*						strchr(const char *s, char c);
-char*						strrchr(const char *s, char c);
-char *					strtok(char *s, const char *delim);
-char *					strtok_r(char *s, const char *delim, char **last);
+// strtol.c
+long strtol(const char *nptr, char **endptr, int base);
+unsigned long strtoul(const char *nptr, char **endptr, int base);
+double strtod (const char *str, char **ptr);
+double atof(const char* str);
 
 // syscall.c
 #define DEF_SYSCALL(id, name) extern uint64 sys_##name(void);

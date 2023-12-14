@@ -1,5 +1,6 @@
 #pragma once
-#include "kernel/types.h"
+#include "common/types.h"
+#include "common/stdlib.h"
 #include "kernel/stat.h"
 #include "kernel/date.h"
 #include "user/system.h"
@@ -33,26 +34,10 @@ int system_info(struct system_info*);
 // ulib.c
 int stat(const char*, struct stat*);
 int rmdir(const char *);
-char* strcpy(char*, const char*);
-char* strcat(char*, const char*);
-char* strncpy(char*, const char*, int);
-void *memmove(void*, const void*, int);
-char* strchr(const char*, char c);
-char* strrchr(const char*, char c);
-int strcmp(const char*, const char*);
 void fprintf(int, const char*, ...);
 void printf(const char*, ...);
 char* gets(char*, int max);
-uint strlen(const char*);
-void* memset(void*, int, uint);
 void* malloc(uint);
 void free(void*);
-int atoi(const char*);
-int memcmp(const void *, const void *, uint);
-void *memcpy(void *, const void *, uint);
 int ugetpid(void);
-int snprintf(char* str, uint64 size, const char* format, ...);
-int sprintf(char *str, const char *format, ...);
 char *getcwd(char *buf, int size);
-char *strtok(char *s, const char *delim);
-char *strtok_r(char *s, const char *delim, char**);

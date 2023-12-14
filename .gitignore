@@ -6,7 +6,9 @@ _*
 *.sym
 *.img
 build/
+.cache/
 .vscode/settings.json
+compile_commands.json
 vectors.S
 bootblock
 entryother

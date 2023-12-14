@@ -1,6 +1,6 @@
 #pragma once
 
-#include "kernel/types.h"
+#include "common/types.h"
 #include "kernel/param.h"
 #include "kernel/riscv.h"
 #include "kernel/spinlock.h"
