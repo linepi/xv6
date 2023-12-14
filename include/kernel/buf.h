@@ -1,3 +1,8 @@
+#pragma once
+#include "common/types.h"
+#include "kernel/sleeplock.h"
+#include "kernel/fs.h"
+
 struct block_buf {
   int valid;   // has data been read from disk?
   int disk;    // does disk "own" buf?

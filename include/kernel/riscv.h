@@ -1,5 +1,5 @@
 #pragma once
-#include "kernel/types.h"
+#include "common/types.h"
 
 // which hart (core) is this?
 static inline uint64
