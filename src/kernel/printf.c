@@ -15,7 +15,7 @@
 volatile int panicked = 0;
 
 // lock to avoid interleaving concurrent printf's.
-static struct {
+struct {
   struct spinlock lock;
   int locking;
 } pr;
@@ -246,6 +246,25 @@ panic(const char *fmt, ...)
   va_list ap;
   va_start(ap, fmt);
   vprintf(fmt, ap);
+  printf(ANSI_FMT("\nsome info: \n", ANSI_FG_CYAN));
+  backtrace(0, 0);
+  procdump();
+  panicked = 1; // freeze uart output from other CPUs
+  for(;;)
+    ;
+}
+
+void
+panic_spinlock(struct spinlock *lk)
+{
+  pr.locking = 0;
+  printf(ANSI_FMT("panic: \n", ANSI_FG_RED));
+  #ifdef DEBUG
+  printf("locktrace: \n");
+  for (int i = lk->l; i != lk->r; i = (i + 1) % SPINLOCK_CPU_TRACE_SIZE) {
+    printf("%s cpu %d %d\n", lk->trace[i].info, lk->trace[i].cpuid, lk->trace[i].type == 0 ? "release" : "acquire");
+  }
+  #endif
   printf(ANSI_FMT("\nsome info: \n", ANSI_FG_CYAN));
   backtrace(0, 0);
   procdump();

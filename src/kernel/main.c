@@ -1,5 +1,6 @@
 #include "kernel/defs.h"
 #include "common/log.h"
+#include "kernel/spinlock.h"
 
 volatile static int started = 0;
 
@@ -11,6 +12,9 @@ main()
     consoleinit();
     printfinit();
     printf(ANSI_FMT("xv6 kernel is booting\n", ANSI_FG_CYAN));
+    #ifdef DEBUG
+    printf(ANSI_FMT("-- in DEBUG mode\n", ANSI_FG_CYAN));
+    #endif
     kinit();         // physical page allocator
     kvminit();       // create kernel page table
     kvminithart();   // turn on paging

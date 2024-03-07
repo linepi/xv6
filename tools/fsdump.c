@@ -11,7 +11,7 @@ Main(char *img, char *destdir)
 int main(int argc, char **argv)
 {
 	if (argc != 3) {
-		fprintf(2, "usage: fsdump <image> <dest dir>\n");
+		fprintf(stderr, "usage: fsdump <image> <dest dir>\n");
 		return 0;
 	}
 	char *img = argv[1];

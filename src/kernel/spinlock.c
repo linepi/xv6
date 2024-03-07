@@ -1,6 +1,7 @@
 // Mutual exclusion spin locks.
 
 #include "common/stdlib.h"
+#include "common/log.h"
 #include "kernel/spinlock.h"
 #include "kernel/riscv.h"
 #include "kernel/proc.h"
@@ -12,6 +13,11 @@ initlock(struct spinlock *lk, char *name)
   strncpy(lk->name, name, sizeof(lk->name));
   lk->locked = 0;
   lk->cpu = 0;
+  #ifdef DEBUG
+  lk->l = 0;
+  lk->r = 0;
+  lk->len = 0;
+  #endif
 }
 
 // Acquire the lock.
@@ -20,8 +26,9 @@ void
 acquire(struct spinlock *lk)
 {
   push_off(); // disable interrupts to avoid deadlock.
-  if(holding(lk))
-    panic("acquire holding lock \"%s\"", lk->name);
+  if(holding(lk)) {
+    panic_spinlock(lk);
+  }
   
   // On RISC-V, sync_lock_test_and_set turns into an atomic swap:
   //   a5 = 1
@@ -44,8 +51,9 @@ acquire(struct spinlock *lk)
 void
 release(struct spinlock *lk)
 {
-  if(!holding(lk))
-    panic("RELEASE not holding lock \"%s\"", lk->name);
+  if(!holding(lk)) {
+    panic_spinlock(lk);
+  }
 
   lk->cpu = 0;
 
@@ -90,7 +98,7 @@ push_off(void)
 
   intr_off();
   if(mycpu()->noff == 0)
-    mycpu()->intena = old;
+    mycpu()->interrupt = old;
   mycpu()->noff += 1;
 }
 
@@ -103,6 +111,6 @@ pop_off(void)
   if(c->noff < 1)
     panic("pop_off");
   c->noff -= 1;
-  if(c->noff == 0 && c->intena)
+  if(c->noff == 0 && c->interrupt)
     intr_on();
 }

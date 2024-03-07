@@ -91,6 +91,7 @@ int             pipewrite(struct pipe*, uint64, int);
 void            printf(const char*, ...);
 void            pure_printf(const char*, ...);
 void            panic(const char*, ...) __attribute__((noreturn));
+void            panic_spinlock(struct spinlock *) __attribute__((noreturn));
 void            assert(int);
 void            printfinit(void);
 void            backtrace(int user, int lineinfo);

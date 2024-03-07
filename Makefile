@@ -3,7 +3,11 @@ U=src/user
 COM=src/common
 MEMORY=128
 
-TOOLPREFIX = riscv64-unknown-elf-
+ifeq ($(uname),Darwin) 
+	TOOLPREFIX = riscv64-unknown-elf-
+else
+	TOOLPREFIX = riscv64-linux-gnu-
+endif
 FS_IMG = build/fs.img
 FS_IMG_FILES = README Makefile LICENSE $(U_PROGS)
 
@@ -25,12 +29,12 @@ LD = ccache $(TOOLPREFIX)ld
 OBJCOPY = $(TOOLPREFIX)objcopy
 OBJDUMP = $(TOOLPREFIX)objdump
 
-CFLAGS = -Wall -Werror -Og -fno-omit-frame-pointer -ggdb3
+CFLAGS = -Wall -Werror -Og -fno-omit-frame-pointer -g3
 CFLAGS += -MMD -Wno-infinite-recursion -Wno-array-bounds -Wno-char-subscripts
-CFLAGS += -DMEMORY_SIZE_MEGABYTES=$(MEMORY)
+CFLAGS += -DMEMORY_SIZE_MEGABYTES=$(MEMORY) -DDEBUG
 CFLAGS += -mcmodel=medany
 CFLAGS += -ffreestanding -fno-common -nostdlib -mno-relax
-CFLAGS += -I$(XV6_HOME)/include
+CFLAGS += -Iinclude
 CFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
 
 # Disable PIE when possible (for Ubuntu 16.10 toolchain)
@@ -41,7 +45,10 @@ ifneq ($(shell $(CC) -dumpspecs 2>/dev/null | grep -e '[^f]nopie'),)
 CFLAGS += -fno-pie -nopie
 endif
 
-LDFLAGS = -z max-page-size=4096 --no-warn-rwx-segments 
+LDFLAGS = -z max-page-size=4096 
+ifeq ($(uname),Darwin) 
+	LDFLAGS += --no-warn-rwx-segments 
+endif
 
 $(K_OBJ_DIR)/kernel: $(K_OBJS) $K/kernel.ld $(U_OBJ_DIR)/initcode
 	@echo "$(ANSI_FG_CYAN)+ LD $(ANSI_NONE)$@"
@@ -109,7 +116,7 @@ qemu: $(K_OBJ_DIR)/kernel $(FS_IMG)
 	$(QEMU) $(QEMUOPTS)
 
 qemu-gdb: $(K_OBJ_DIR)/kernel $(FS_IMG)
-	@echo "Now run 'gdb' in another window." 1>&2
+	@echo "Now run 'gdb' in another window. Port: $(QEMUGDB)" 1>&2
 	$(QEMU) $(QEMUOPTS) -S $(QEMUGDB)
 
 all: $(K_OBJ_DIR)/kernel $(FS_IMG)

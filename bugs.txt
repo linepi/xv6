@@ -10,7 +10,7 @@ shot on bug 1:
 	hart 1 starting
 	info: 30251 page | 194735 block
 	init: starting sh
-	panic: acquire holding lock "proc 1"
+	panic: [src/kernel/proc.c:602 scheduler] acquire holding lock "proc 1"
 
 shot on bug 1:
 	√ /Users/wu/dev/OS/xv6 % make qemu 

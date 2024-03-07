@@ -624,15 +624,15 @@ scheduler(void)
 
 // Switch to scheduler.  Must hold only p->lock
 // and have changed proc->state. Saves and restores
-// intena because intena is a property of this
+// interrupt because interrupt is a property of this
 // kernel thread, not this CPU. It should
-// be proc->intena and proc->noff, but that would
+// be proc->interrupt and proc->noff, but that would
 // break in the few places where a lock is held but
 // there's no process.
 void
 sched(void)
 {
-  int intena;
+  int interrupt;
   struct proc *p = myproc();
 
   if(!holding(&p->lock))
@@ -644,9 +644,9 @@ sched(void)
   if(intr_get())
     panic("sched interruptible");
 
-  intena = mycpu()->intena;
+  interrupt = mycpu()->interrupt;
   swtch(&p->context, &mycpu()->context);
-  mycpu()->intena = intena;
+  mycpu()->interrupt = interrupt;
 }
 
 // Give up the CPU for one scheduling round.
@@ -710,7 +710,7 @@ sleep(void *chan, struct spinlock *lk)
 
   // Reacquire original lock.
   RELEASE(&p->lock);
-  acquire(lk);
+  ACQUIRE(lk);
 }
 
 // Wake up all processes sleeping on chan.

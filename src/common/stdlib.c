@@ -557,3 +557,7 @@ char *basename(const char *path) {
   else
     return res + 1;
 }
+
+int sequal(const char *a, const char *b) {
+  return strcmp(a, b) == 0;
+}

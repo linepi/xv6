@@ -32,3 +32,4 @@ int 						isupper(int c);
 int 						isalpha(int c);
 char *					basename(const char *path);
 int 						bscanf(const char *buffer, const char *format, ...);
+int 						sequal(const char *a, const char *b);
