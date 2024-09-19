@@ -3,7 +3,7 @@ U=src/user
 COM=src/common
 MEMORY=128
 
-ifeq ($(uname),Darwin) 
+ifeq ($(shell uname),Darwin) 
 	TOOLPREFIX = riscv64-unknown-elf-
 else
 	TOOLPREFIX = riscv64-linux-gnu-
