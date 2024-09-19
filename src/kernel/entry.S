@@ -1,3 +1,5 @@
+#define PGSIZE 4096
+#define STACK_SIZE_PER_CPU PGSIZE*20
 	# qemu -kernel loads the kernel at 0x80000000
         # and causes each CPU to jump there.
         # kernel.ld causes the following code to
@@ -10,7 +12,7 @@ _entry:
         # with a 4096-byte stack per CPU.
         # sp = stack0 + (hartid * 4096)
         la sp, stack0
-        li a0, 1024*8
+        li a0, STACK_SIZE_PER_CPU
 	csrr a1, mhartid
         addi a1, a1, 1
         mul a0, a0, a1

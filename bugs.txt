@@ -1,69 +1,76 @@
-1. may "panic: acquire" at kernel start
-2. may stuck at kernel start()
-3. cannot call diskleft in sysinfo_dump func, dont know why
+√ / # spinlock panic: cpu 1 acquire holding lock "proc 1"
+locktrace: 
+[wait] cpu 1 acquire
+[sleep] cpu 1 acquire
+[allocproc] cpu 1 acquire
+[fork] cpu 1 release
+[fork] cpu 1 acquire
+[scheduler] cpu 1 release
+some info: 
+backtrace:
+0x80009058
+0x8000ae70
+0x80004a6e
+0x80007fbe
+0x8000a094
+0x8000dd8e
+0x8000a3b6
+0x8000cd6a
+pid  state  proc          pages
+1    sleep  /bin/init     5
+2    run    /bin/sh       6
 
-shot on bug 1:
-	√ /Users/wu/dev/OS/xv6 % make qemu
-	qemu-system-riscv64 -machine virt -bios none -kernel build/kernel/kernel -m 128M -smp 3 -nographic -drive file=build/fs.img,if=none,format=raw,id=x0 -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0
-	xv6 kernel is booting
-	hart 2 starting
-	hart 1 starting
-	info: 30251 page | 194735 block
-	init: starting sh
-	panic: [src/kernel/proc.c:602 scheduler] acquire holding lock "proc 1"
+√ / # spinlock panic: cpu 2 acquire holding lock "proc 1"
+locktrace: 
+[allocproc] cpu 2 acquire
+[fork] cpu 2 release
+[fork] cpu 2 acquire
+[scheduler] cpu 2 release
+[wait] cpu 2 acquire
+[sleep] cpu 2 acquire
+some info: 
+backtrace:
+0x80009058
+0x8000ae70
+0x80004a6e
+0x80007fbe
+0x8000a094
+0x8000dd8e
+0x8000a3b6
+0x8000cd6a
+pid  state  proc          pages
+1    sleep  /bin/init     5
+2    run    /bin/sh       6
 
-shot on bug 1:
-	√ /Users/wu/dev/OS/xv6 % make qemu 
-	qemu-system-riscv64 -machine virt -bios none -kernel build/kernel/kernel -m 128M -smp 3 -nographic -drive file=build/fs.img,if=none,format=raw,id=x0 -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0
-	xv6 kernel is booting
-	hart 2 starting
-	hart 1 starting
-	info: 30251 page | 194722 block
-	stuck here..
+spinlock panic: cpu 0 release not held lock "proc 0"
+locktrace: 
+[scheduler] cpu 0 release
+[scheduler] cpu 0 acquire
+[scheduler] cpu 0 release
+[scheduler] cpu 0 acquire
+[scheduler] cpu 0 release
+[scheduler] cpu 0 acquire
+[scheduler] cpu 0 release
+[scheduler] cpu 0 acquire
+[scheduler] cpu 0 acquire
 
-shot on bug 1:
-	√ /Users/wu/dev/OS/xv6 % make qemu 
-	qemu-system-riscv64 -machine virt -bios none -kernel build/kernel/kernel -m 128M -smp 3 -nographic -drive file=build/fs.img,if=none,format=raw,id=x0 -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0
-	xv6 kernel is booting
-	hart 1 starting
-	hart 2 starting
-	info: 30251 page | 194722 block
-	init: starting sh
-	√ / # panic: acquire holding lock "proc 1"
-	some info: 
-	backtrace:
-	0x80002e62
-	0x800090e6
-	0x8000aaf8
-	0x80008c6c
-	0x8000bfb4
-	0x800058ae
-	0x80007944
-	0x800089b6
-
-	pid  state  proc          pages
-	1    sleep  /bin/init     5
-	2    run    /bin/sh       6
-
-shot on bug 1:
-	√ /Users/wu/dev/OS/xv6 % make qemu 
-	qemu-system-riscv64 -machine virt -bios none -kernel build/kernel/kernel -m 128M -smp 3 -nographic -drive file=build/fs.img,if=none,format=raw,id=x0 -device virtio-blk-device,drive=x0,bus=virtio-mmio-bus.0
-	xv6 kernel is booting
-	hart 2 starting
-	hart 1 starting
-	info: 30251 page | 194722 block
-	panic: acquire holding lock "proc 0"
-	some info: 
-	backtrace:
-	0x80002e62
-	0x800090e6
-	0x8000aaf8
-	0x8000b916
-	0x8000953c
-	0x80006e12
-	0x80005db8
-	0x80007944
-	0x800089b6
-
-	pid  state  proc          pages
-	1    run    /bin/init     5
+[scheduler] cpu 2 acquire
+[scheduler] cpu 2 release
+[scheduler] cpu 0 acquire
+[scheduler] cpu 0 release
+[scheduler] cpu 2 acquire
+[scheduler] cpu 2 release
+[allocproc] cpu 1 acquire
+[scheduler] cpu 2 acquire
+[scheduler] cpu 0 acquire
+[fork] cpu 1 release
+[scheduler] cpu 2 release
+[scheduler] cpu 0 release
+[fork] cpu 1 acquire
+[fork] cpu 0 release
+[scheduler] cpu 1 release
+[forkret] cpu 1 release
+[scheduler] cpu 2 release
+[scheduler] cpu 0 release
+[wait] cpu 1 acquire
+[scheduler] cpu 1 acquire

@@ -13,21 +13,24 @@ initlock(struct spinlock *lk, char *name)
   strncpy(lk->name, name, sizeof(lk->name));
   lk->locked = 0;
   lk->cpu = 0;
-  #ifdef DEBUG
-  lk->l = 0;
-  lk->r = 0;
+#ifdef DEBUG
+  lk->cur = -1;
   lk->len = 0;
-  #endif
+#endif
 }
 
 // Acquire the lock.
 // Loops (spins) until the lock is acquired.
 void
-acquire(struct spinlock *lk)
+acquire(struct spinlock *lk, const char *func, int line)
 {
   push_off(); // disable interrupts to avoid deadlock.
+  if(intr_get())
+    panic("interrupt not disabled after push_off!");
   if(holding(lk)) {
-    panic_spinlock(lk);
+    char buf[60];
+    snprintf(buf, sizeof(buf), "[%s:%d] cpu %d acquire holding lock \"%s\"", func, line, cpuid(), lk->name);
+    panic_spinlock(lk, buf);
   }
   
   // On RISC-V, sync_lock_test_and_set turns into an atomic swap:
@@ -49,10 +52,15 @@ acquire(struct spinlock *lk)
 
 // Release the lock.
 void
-release(struct spinlock *lk)
+release(struct spinlock *lk, const char *func, int line)
 {
+  if(intr_get())
+    panic("interrupt not disabled when release!");
   if(!holding(lk)) {
-    panic_spinlock(lk);
+    char buf[60];
+    snprintf(buf, sizeof(buf), "[%s:%d] cpu %d release not held lock \"%s\", \
+      locked: %d", func, line, cpuid(), lk->name, lk->locked);
+    panic_spinlock(lk, buf);
   }
 
   lk->cpu = 0;
@@ -90,6 +98,9 @@ holding(struct spinlock *lk)
 // push_off/pop_off are like intr_off()/intr_on() except that they are matched:
 // it takes two pop_off()s to undo two push_off()s.  Also, if interrupts
 // are initially off, then push_off, pop_off leaves them off.
+// 
+// in a word, push_off will close interrupt, the last pop_off of push_off will probably
+// open interrupt, depend on whether interrupt initially is on before first push_off
 
 void
 push_off(void)

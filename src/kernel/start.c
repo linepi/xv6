@@ -3,11 +3,13 @@
 #include "kernel/memlayout.h"
 #include "kernel/riscv.h"
 
+#define STACK_SIZE_PER_CPU PGSIZE*20
+
 void main();
 void timerinit();
 
 // entry.S needs one stack per CPU.
-__attribute__ ((aligned (16))) char stack0[2 * PGSIZE * NCPU];
+__attribute__ ((aligned (16))) char stack0[STACK_SIZE_PER_CPU * NCPU];
 
 // a scratch area per CPU for machine-mode timer interrupts.
 uint64 timer_scratch[NCPU][5];

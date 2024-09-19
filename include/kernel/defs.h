@@ -91,7 +91,7 @@ int             pipewrite(struct pipe*, uint64, int);
 void            printf(const char*, ...);
 void            pure_printf(const char*, ...);
 void            panic(const char*, ...) __attribute__((noreturn));
-void            panic_spinlock(struct spinlock *) __attribute__((noreturn));
+void            panic_spinlock(struct spinlock *, char *) __attribute__((noreturn));
 void            assert(int);
 void            printfinit(void);
 void            backtrace(int user, int lineinfo);
@@ -127,10 +127,10 @@ void            proc_free_kpagetable(struct proc *p, uint64);
 void            swtch(struct context*, struct context*);
 
 // spinlock.c
-void            acquire(struct spinlock*);
+void            acquire(struct spinlock*, const char *, int);
 int             holding(struct spinlock*);
 void            initlock(struct spinlock*, char*);
-void            release(struct spinlock*);
+void            release(struct spinlock*, const char *, int);
 void            push_off(void);
 void            pop_off(void);
 

@@ -3,9 +3,10 @@
 #include "common/log.h"
 #include "common/stdlib.h"
 
-#define SPINLOCK_CPU_TRACE_SIZE 16
+#define SPINLOCK_CPU_TRACE_SIZE 15
+#define SPINLOCK_CPU_TRACE_INFO_SIZE 15
 struct spinlock_cpu_trace {
-  char info[100];
+  char info[SPINLOCK_CPU_TRACE_INFO_SIZE];
   uint8 cpuid;
   uint8 type; // 1 for acquire, 0 for release
 };
@@ -17,13 +18,11 @@ struct spinlock {
   char name[20];        // Name of lock.
   struct cpu *cpu;   // The cpu holding the lock.
   #ifdef DEBUG
-  uint16 l, r, len;
+  uint16 cur, len;
   struct spinlock_cpu_trace trace[SPINLOCK_CPU_TRACE_SIZE];
   #endif
 };
 
-void acquire(struct spinlock *lk);
-void release(struct spinlock *lk);
 int strcmp(const char *p, const char *q);
 int bscanf(const char *buffer, const char *format, ...);
 
@@ -40,32 +39,25 @@ static inline int lock_blacklist(struct spinlock *lk) {
 }
 
 #ifdef DEBUG
-#define ACQUIRE(lk) do { \
-  (lk)->r = ((lk)->r + 1) % SPINLOCK_CPU_TRACE_SIZE; \
-  sprintf((lk)->trace[(lk)->r].info, "[%s:%d %s]", __FILE__, __LINE__, __func__); \
+#define RECORD_INFO(lk, tp) \
+  (lk)->cur = ((lk)->cur + 1) % SPINLOCK_CPU_TRACE_SIZE; \
+  snprintf((lk)->trace[(lk)->cur].info, SPINLOCK_CPU_TRACE_INFO_SIZE, "%s:%d", __func__, __LINE__); \
   if ((lk)->len < SPINLOCK_CPU_TRACE_SIZE) { \
     (lk)->len++; \
-  } else { \
-    (lk)->l = ((lk)->l + 1) % SPINLOCK_CPU_TRACE_SIZE; \
   } \
-  (lk)->trace[(lk)->r].type = 1; \
-  (lk)->trace[(lk)->r].cpuid = cpuid(); \
-  acquire(lk); \
+  (lk)->trace[(lk)->cur].type = tp; \
+  (lk)->trace[(lk)->cur].cpuid = cpuid()
+
+#define ACQUIRE(lk) do { \
+  acquire(lk, __func__, __LINE__); \
+  RECORD_INFO(lk, 1); \
 } while(0)
 
 #define RELEASE(lk) do { \
-  (lk)->r = ((lk)->r + 1) % SPINLOCK_CPU_TRACE_SIZE; \
-  sprintf((lk)->trace[(lk)->r].info, "[%s:%d %s]", __FILE__, __LINE__, __func__); \
-  if ((lk)->len < SPINLOCK_CPU_TRACE_SIZE) { \
-    (lk)->len++; \
-  } else { \
-    (lk)->l = ((lk)->l + 1) % SPINLOCK_CPU_TRACE_SIZE; \
-  } \
-  (lk)->trace[(lk)->r].type = 0; \
-  (lk)->trace[(lk)->r].cpuid = cpuid(); \
-  release(lk); \
+  release(lk, __func__, __LINE__); \
+  RECORD_INFO(lk, 0); \
 } while(0)
 #else
-#define ACQUIRE(lk) acquire(lk, NULL)
-#define RELEASE(lk) release(lk, NULL)
+#define ACQUIRE(lk) acquire(lk, __func__, __LINE__)
+#define RELEASE(lk) release(lk, __func__, __LINE__)
 #endif

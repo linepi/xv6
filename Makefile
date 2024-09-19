@@ -31,11 +31,14 @@ OBJDUMP = $(TOOLPREFIX)objdump
 
 CFLAGS = -Wall -Werror -Og -fno-omit-frame-pointer -g3
 CFLAGS += -MMD -Wno-infinite-recursion -Wno-array-bounds -Wno-char-subscripts
-CFLAGS += -DMEMORY_SIZE_MEGABYTES=$(MEMORY) -DDEBUG
+CFLAGS += -DMEMORY_SIZE_MEGABYTES=$(MEMORY)
 CFLAGS += -mcmodel=medany
 CFLAGS += -ffreestanding -fno-common -nostdlib -mno-relax
 CFLAGS += -Iinclude
 CFLAGS += $(shell $(CC) -fno-stack-protector -E -x c /dev/null >/dev/null 2>&1 && echo -fno-stack-protector)
+ifdef DEBUG 
+CFLAGS += -DDEBUG
+endif
 
 # Disable PIE when possible (for Ubuntu 16.10 toolchain)
 ifneq ($(shell $(CC) -dumpspecs 2>/dev/null | grep -e '[^f]no-pie'),)
@@ -128,6 +131,8 @@ clean:
 tags: $(K_OBJS) _init
 	etags *.S *.c
 
+PHONY=all test clean
+ 
 ANSI_FG_BLACK   = \033[1;30m
 ANSI_FG_RED     = \033[1;31m
 ANSI_FG_GREEN   = \033[1;32m

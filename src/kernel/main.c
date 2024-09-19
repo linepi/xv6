@@ -1,6 +1,7 @@
 #include "kernel/defs.h"
 #include "common/log.h"
 #include "kernel/spinlock.h"
+#include "kernel/proc.h"
 
 volatile static int started = 0;
 

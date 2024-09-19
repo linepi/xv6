@@ -255,14 +255,23 @@ panic(const char *fmt, ...)
 }
 
 void
-panic_spinlock(struct spinlock *lk)
+panic_spinlock(struct spinlock *lk, char *msg)
 {
   pr.locking = 0;
-  printf(ANSI_FMT("panic: \n", ANSI_FG_RED));
+  printf(ANSI_FMT("spinlock panic: %s\n", ANSI_FG_RED), msg);
   #ifdef DEBUG
   printf("locktrace: \n");
-  for (int i = lk->l; i != lk->r; i = (i + 1) % SPINLOCK_CPU_TRACE_SIZE) {
-    printf("%s cpu %d %d\n", lk->trace[i].info, lk->trace[i].cpuid, lk->trace[i].type == 0 ? "release" : "acquire");
+  if (lk->len <= SPINLOCK_CPU_TRACE_SIZE) {
+    for (int i = 0; i < lk->len; i++) {
+      printf("[%s] cpu %d %s \"%s\"\n", lk->trace[i].info, lk->trace[i].cpuid, 
+        lk->trace[i].type == 0 ? "release" : "acquire", lk->name);
+    }
+  } else {
+    for (int loop = 1; loop <= SPINLOCK_CPU_TRACE_SIZE; loop++) {
+      int i = (lk->cur + loop) % SPINLOCK_CPU_TRACE_SIZE;
+      printf("[%s] cpu %d %s \"%s\"\n", lk->trace[i].info, lk->trace[i].cpuid, 
+        lk->trace[i].type == 0 ? "release" : "acquire", lk->name);
+    }
   }
   #endif
   printf(ANSI_FMT("\nsome info: \n", ANSI_FG_CYAN));
